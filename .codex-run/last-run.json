@@ -1,0 +1,21 @@
+{
+    "startedAt":  "2026-05-11T16:31:13.1478772+03:00",
+    "backend":  {
+                    "pid":  33208,
+                    "port":  4000,
+                    "out":  "D:\\Web Projects\\shughaily\\.codex-run\\backend-20260511-163113.out.log",
+                    "err":  "D:\\Web Projects\\shughaily\\.codex-run\\backend-20260511-163113.err.log"
+                },
+    "aiService":  {
+                      "pid":  26476,
+                      "port":  5050,
+                      "out":  "D:\\Web Projects\\shughaily\\.codex-run\\ai-service-20260511-163113.out.log",
+                      "err":  "D:\\Web Projects\\shughaily\\.codex-run\\ai-service-20260511-163113.err.log"
+                  },
+    "frontend":  {
+                     "pid":  26556,
+                     "port":  5173,
+                     "out":  "D:\\Web Projects\\shughaily\\.codex-run\\frontend-20260511-163113.out.log",
+                     "err":  "D:\\Web Projects\\shughaily\\.codex-run\\frontend-20260511-163113.err.log"
+                 }
+}
