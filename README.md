@@ -23,7 +23,7 @@ A full-stack SaaS that helps Arabic-speaking job seekers upload CVs, get AI-matc
 <table>
   <tr>
     <td align="center" width="50%">
-      <b>Login / Landing</b><br/>
+      <b>Login / Landing — تسجيل الدخول</b><br/>
       <img src="docs/screenshots/01-login.png" alt="Login page" width="100%"/>
     </td>
     <td align="center" width="50%">
@@ -33,23 +33,30 @@ A full-stack SaaS that helps Arabic-speaking job seekers upload CVs, get AI-matc
   </tr>
   <tr>
     <td align="center" width="50%">
-      <b>Job Search — الوظائف</b><br/>
-      <img src="docs/screenshots/03-jobs.png" alt="Jobs page" width="100%"/>
+      <b>Job Search & Agents — الوظائف</b><br/>
+      <img src="docs/screenshots/04-jobs.png" alt="Jobs page with search agents" width="100%"/>
     </td>
     <td align="center" width="50%">
       <b>Resume Manager — سيرتي الذاتية</b><br/>
-      <img src="docs/screenshots/04-resumes.png" alt="Resume page" width="100%"/>
+      <img src="docs/screenshots/03-CV.png" alt="Resume manager with uploaded CV" width="100%"/>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <b>Application Tracker — الطلبات</b><br/>
-      <img src="docs/screenshots/05-applications.png" alt="Applications page" width="100%"/>
+      <b>ATS Checker — فحص توافق ATS</b><br/>
+      <img src="docs/screenshots/04-Ats.png" alt="ATS compatibility checker" width="100%"/>
     </td>
     <td align="center" width="50%">
-      <b>AI Copilot — المساعد</b><br/>
-      <img src="docs/screenshots/06-copilot.png" alt="Copilot page" width="100%"/>
+      <b>Cover Letter Generator — رسالة التقدم</b><br/>
+      <img src="docs/screenshots/08-coverletter.png" alt="Cover letter generator" width="100%"/>
     </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <b>Application Tracker — متابعة الطلبات</b><br/>
+      <img src="docs/screenshots/05-applications.png" alt="Application tracker" width="100%"/>
+    </td>
+    <td align="center"></td>
   </tr>
 </table>
 
