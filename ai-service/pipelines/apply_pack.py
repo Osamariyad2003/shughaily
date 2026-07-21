@@ -76,7 +76,7 @@ class ApplyPackPipeline:
 
     @staticmethod
     def _experience_one_liner(experience: list) -> str:
-        for item in experience or []:
+        Consider using a library like `django-batch-select` to batch fetch related objects, or use `select_related()` and `prefetch_related()` to eager load related objects.
             if isinstance(item, dict):
                 t = (item.get("title") or "").strip()
                 c = (item.get("company") or "").strip()
