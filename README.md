@@ -84,7 +84,6 @@ Al-Shughaily is a personal full-stack project built to explore what an end-to-en
   </tr>
 </table>
 
-> Screenshots are captured automatically with a headless Playwright script — see [`frontend/scripts/capture-screenshots.mjs`](frontend/scripts/capture-screenshots.mjs).
 
 ---
 
