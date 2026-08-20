@@ -7,8 +7,12 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-shughaily}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shughaily}
       POSTGRES_DB: ${POSTGRES_DB:-shughaily}
-    ports:
-      - "5432:5432"
+    # No host port mapping: reachable only on the internal Docker network,
+    # by `backend`/`ai-service`. For local host access (psql, a GUI client),
+    # add a mapping in docker-compose.override.yml — never here, since this
+    # file is what a shared/prod-like environment runs.
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
@@ -23,8 +27,9 @@ services:
     image: redis:7-alpine
     container_name: shughaily-redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    # No host port mapping — see postgres's note above.
+    expose:
+      - "6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -51,6 +56,10 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       FLASK_AI_URL: http://ai-service:5001
+      # Shared secret proving a request actually came from this backend —
+      # ai-service rejects any /api/* call missing/mismatching it. Required,
+      # no default: both services must be given the same value.
+      INTERNAL_AUTH_TOKEN: ${INTERNAL_AUTH_TOKEN:?INTERNAL_AUTH_TOKEN must be set — shared secret between backend and ai-service}
       PORT: 4000
       NODE_ENV: production
     ports:
@@ -71,14 +80,20 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-shughaily}:${POSTGRES_PASSWORD:-shughaily}@postgres:5432/${POSTGRES_DB:-shughaily}
       REDIS_URL: redis://redis:6379
       FLASK_PORT: 5001
+      FLASK_DEBUG: "false"
       HF_MODEL_NAME: ${HF_MODEL_NAME:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
       EXPRESS_URL: http://backend:4000
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-oss-120b:free}
-    ports:
-      - "5001:5001"
+      INTERNAL_AUTH_TOKEN: ${INTERNAL_AUTH_TOKEN:?INTERNAL_AUTH_TOKEN must be set — shared secret between backend and ai-service}
+    # No host port mapping: reachable ONLY by `backend` over the internal
+    # Docker network (service name `ai-service`, port 5001). This was
+    # previously "5001:5001" (host-published) — that let anything reachable
+    # on the host hit the AI service directly, bypassing Express entirely.
+    expose:
+      - "5001"
 
   frontend:
     build:

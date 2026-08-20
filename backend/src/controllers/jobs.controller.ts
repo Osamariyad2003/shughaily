@@ -57,7 +57,7 @@ export const getJobs = asyncHandler(async (req: Request, res: Response): Promise
   );
 
   const jobs = await query<Job>(
-    `SELECT id, source, external_id, title, normalized_title, company, location, description, salary_text, employment_type, created_at
+    `SELECT id, source, external_id, title, normalized_title, company, location, description, salary_text, employment_type, posted_at, created_at
      FROM jobs
      ${whereClause}
      ORDER BY ${safeSort} ${safeOrder}
@@ -80,7 +80,7 @@ export const getJobs = asyncHandler(async (req: Request, res: Response): Promise
 
 export const getJob = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const rows = await query<Job>(
-    `SELECT id, source, external_id, title, normalized_title, company, location, description, salary_text, employment_type, apply_url, employer_logo, created_at
+    `SELECT id, source, external_id, title, normalized_title, company, location, description, salary_text, employment_type, apply_url, employer_logo, posted_at, created_at
      FROM jobs
      WHERE id = $1`,
     [req.params.id],
@@ -108,7 +108,7 @@ export const getRecommendedJobs = asyncHandler(async (req: Request, res: Respons
 
   if (resumes.length === 0) {
     const jobs = await query<Job>(
-      `SELECT id, source, external_id, title, normalized_title, company, location, description, salary_text, employment_type, created_at
+      `SELECT id, source, external_id, title, normalized_title, company, location, description, salary_text, employment_type, posted_at, created_at
        FROM jobs
        ORDER BY created_at DESC
        LIMIT 20`,
@@ -172,6 +172,7 @@ export const getSavedJobs = asyncHandler(async (req: Request, res: Response): Pr
        j.description,
        j.salary_text,
        j.employment_type,
+       j.posted_at,
        j.created_at
      FROM saved_jobs s
      JOIN jobs j ON j.id = s.job_id

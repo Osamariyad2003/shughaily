@@ -51,7 +51,20 @@ def _detect_intent(message: str) -> str:
 
 
 def _build_user_context(user_id: str | None) -> str:
-    """Hydrate a compact user-context block for the system prompt."""
+    """Hydrate a compact user-context block for the system prompt.
+
+    Unlike the resume_id-bearing routes in match.py/generate.py, there is
+    no second id here to cross-check `user_id` against — this endpoint has
+    no way to independently verify "the caller is actually this user"
+    beyond the request having passed app.py's before_request internal-auth
+    check at all. The trust chain is: only the Express backend can reach
+    this endpoint (internal-auth header, network isolation), and Express
+    is required to forward only its OWN authenticated session's user_id
+    here, never a client-supplied one — see backend's chat controller.
+    That's the "gate" for this hydration; there's no additional check to
+    add on this side without introducing a real session/JWT verification
+    into this service, which is out of scope for this pass.
+    """
     if not user_id:
         return "(مستخدم غير مسجّل دخوله)"
 

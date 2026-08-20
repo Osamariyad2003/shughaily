@@ -4,6 +4,7 @@ import { pool } from './config/database';
 import { startAgentScheduler } from './jobs/agentScheduler';
 import { ensureSearchAgentTables } from './services/searchAgent.service';
 import { startUsageWorker } from './jobs/usageLogger';
+import { startSearchAgentRunWorker } from './jobs/searchAgentRunQueue';
 
 async function main(): Promise<void> {
   // Verify database connectivity
@@ -17,6 +18,8 @@ async function main(): Promise<void> {
     console.log('Agent scheduler initialized');
     startUsageWorker();
     console.log('Usage logging worker started');
+    startSearchAgentRunWorker();
+    console.log('Search agent run worker started');
   } catch (err) {
     console.error('Failed to connect to PostgreSQL:', err);
     console.warn('Server will start but database operations will fail until connection is available.');

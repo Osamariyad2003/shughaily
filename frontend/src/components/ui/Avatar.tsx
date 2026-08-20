@@ -18,7 +18,7 @@ function getInitials(name: string): string {
   if (parts.length >= 2) {
     return parts[0][0] + parts[1][0]
   }
-  return parts[0]?.slice(0, 2) || '؟'
+  return parts[0]?.slice(0, 2) || '?'
 }
 
 export default function Avatar({

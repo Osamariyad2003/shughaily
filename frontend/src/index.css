@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "./styles/tokens.css";
+@import "./styles/rushd.css";
 
 @theme {
   --color-primary: #0EA5A4;
@@ -21,12 +23,43 @@ html {
 }
 
 body {
+  /* NOT var(--rushd-font-sans) yet: that stack puts 'Thmanyah Sans' first,
+   * but only its 700/900 faces are real right now (see tokens.css STATUS
+   * note). With no 400-weight face registered, normal body text would be
+   * weight-matched to the 700 face and render bold everywhere. Falls back
+   * to the pre-Thmanyah stack until Regular/Medium/Light are wired in —
+   * bold-weight UI (buttons) already opts into Thmanyah Sans directly,
+   * since 600–900 requests resolve correctly against what's real today. */
   font-family: var(--font-sans);
+  line-height: var(--rushd-line-body, 1.7);
   color: #0F172A;
   background-color: #FFFFFF;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Thmanyah, app-wide: only 700/900 are real right now (see tokens.css
+ * STATUS note), so rather than flip body's default and bold-ify every
+ * normal-weight paragraph and input, this targets every place across the
+ * whole app that already requests bold/semibold weight — Tailwind's
+ * .font-bold/.font-semibold utilities (used throughout pages/) and every
+ * heading tag — so real Thmanyah Sans applies everywhere it safely can
+ * without a single per-page edit. h1/h2 get Serif Display first, which
+ * currently has zero registered faces and so falls straight through to
+ * this same Thmanyah Sans Bold face — they'll upgrade automatically, no
+ * further CSS changes needed, once a clean Serif Display bundle lands. */
+/* :where(...) zeroes out the class list's specificity so it never
+ * outranks the h1/h2 rule below — without it, an <h1 class="font-bold">
+ * (extremely common with Tailwind) would have the class selector win over
+ * the tag selector and silently skip the Serif Display treatment. */
+h3, h4, h5, h6,
+:where(.font-semibold, .font-bold, .font-extrabold, .font-black) {
+  font-family: var(--rushd-font-sans);
+}
+
+h1, h2 {
+  font-family: var(--rushd-font-serif);
 }
 
 @media (prefers-reduced-motion: reduce) {

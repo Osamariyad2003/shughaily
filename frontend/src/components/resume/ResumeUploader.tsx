@@ -78,7 +78,7 @@ export default function ResumeUploader({ onUpload, loading }: ResumeUploaderProp
       className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${
         dragActive
           ? 'border-[#0EA5A4] bg-[#CCFBF1]/30'
-          : 'border-[#E2E8F0] bg-[#F8FAFC] hover:border-[#0EA5A4] hover:bg-[#CCFBF1]/20'
+          : 'border-[#E2E8F0] bg-[var(--rushd-surface-alt)] hover:border-[#0EA5A4] hover:bg-[#CCFBF1]/20'
       }`}
     >
       <input

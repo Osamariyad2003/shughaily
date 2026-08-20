@@ -15,20 +15,30 @@ import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Spinner from '@/components/ui/Spinner'
 import { useApplications, useUpdateApplication, useDeleteApplication } from '@/hooks/useApplications'
-import { APPLICATION_STATUSES } from '@/lib/constants'
 import { formatRelativeDate } from '@/lib/utils'
+import { useTranslation } from '@/store/i18nStore'
+import type { TranslationKey } from '@/lib/locales'
 import type { Application } from '@/lib/types'
 
 type ViewMode = 'kanban' | 'list'
 
-const PIPELINE_STAGES = [
-  { value: 'saved', label: 'تم الحفظ', color: 'bg-slate-500', lightColor: 'bg-slate-50 border-slate-200' },
-  { value: 'applied', label: 'تم التقديم', color: 'bg-blue-500', lightColor: 'bg-blue-50 border-blue-200' },
-  { value: 'interviewing', label: 'مقابلة', color: 'bg-amber-500', lightColor: 'bg-amber-50 border-amber-200' },
-  { value: 'offered', label: 'عرض وظيفي', color: 'bg-green-500', lightColor: 'bg-green-50 border-green-200' },
-  { value: 'rejected', label: 'مرفوض', color: 'bg-red-500', lightColor: 'bg-red-50 border-red-200' },
-  { value: 'withdrawn', label: 'منسحب', color: 'bg-slate-400', lightColor: 'bg-slate-50 border-slate-300' },
-] as const
+const PIPELINE_STAGES: { value: string; labelKey: TranslationKey; color: string; lightColor: string }[] = [
+  { value: 'saved', labelKey: 'applications.status.saved', color: 'bg-slate-500', lightColor: 'bg-[var(--rushd-surface-alt)] border-[var(--rushd-border-strong)]' },
+  { value: 'applied', labelKey: 'applications.status.applied', color: 'bg-blue-500', lightColor: 'bg-blue-50 border-blue-200' },
+  { value: 'interviewing', labelKey: 'applications.status.interviewing', color: 'bg-amber-500', lightColor: 'bg-amber-50 border-amber-200' },
+  { value: 'offered', labelKey: 'applications.status.offered', color: 'bg-green-500', lightColor: 'bg-green-50 border-green-200' },
+  { value: 'rejected', labelKey: 'applications.status.rejected', color: 'bg-red-500', lightColor: 'bg-red-50 border-red-200' },
+  { value: 'withdrawn', labelKey: 'applications.status.withdrawn', color: 'bg-slate-400', lightColor: 'bg-[var(--rushd-surface-alt)] border-[var(--rushd-border-strong)]' },
+]
+
+const STATUS_FILTERS: { value: string; labelKey: TranslationKey }[] = [
+  { value: 'all', labelKey: 'applications.status.all' },
+  { value: 'saved', labelKey: 'applications.status.saved' },
+  { value: 'applied', labelKey: 'applications.status.applied' },
+  { value: 'interviewing', labelKey: 'applications.status.interviewing' },
+  { value: 'offered', labelKey: 'applications.status.offered' },
+  { value: 'rejected', labelKey: 'applications.status.rejected' },
+]
 
 // ─── Notes Modal ─────────────────────────────────────────────────────────────
 
@@ -42,29 +52,30 @@ function NotesModal({
   onSave: (notes: string) => void
 }) {
   const [notes, setNotes] = useState(application.notes ?? '')
+  const { t, dir } = useTranslation()
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
         className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
-        dir="rtl"
+        dir={dir}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-[#0F172A]">ملاحظات — {application.job_title}</h3>
+          <h3 className="text-lg font-semibold text-[#0F172A]">{t('applications.notes.title')} — {application.job_title}</h3>
           <button type="button" onClick={onClose} className="rounded-lg p-1 text-[#94A3B8] hover:text-[#0F172A]">
             <X className="h-5 w-5" />
           </button>
         </div>
         <textarea
-          className="mb-4 min-h-[160px] w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 text-sm leading-7 text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#0EA5A4] focus:outline-none"
+          className="mb-4 min-h-[160px] w-full rounded-xl border border-[#E2E8F0] bg-[var(--rushd-surface-alt)] p-4 text-sm leading-7 text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#0EA5A4] focus:outline-none"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="اكتب ملاحظاتك هنا... مثال: تمت المقابلة الأولى بنجاح، المتابعة بعد أسبوع."
+          placeholder={t('applications.notes.placeholder')}
         />
         <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose}>إلغاء</Button>
-          <Button onClick={() => { onSave(notes); onClose() }}>حفظ الملاحظات</Button>
+          <Button variant="secondary" onClick={onClose}>{t('applications.cancel')}</Button>
+          <Button onClick={() => { onSave(notes); onClose() }}>{t('applications.notes.save')}</Button>
         </div>
       </div>
     </div>
@@ -86,6 +97,8 @@ function ApplicationCard({
   onNotesClick: () => void
   onDelete: () => void
 }) {
+  const { t, language } = useTranslation()
+
   return (
     <div className={`rounded-xl border bg-white transition-shadow hover:shadow-md ${compact ? 'p-3' : 'p-4'}`}>
       <div className="flex items-start gap-3">
@@ -97,16 +110,16 @@ function ApplicationCard({
             to={`/jobs/${application.job_id}`}
             className={`block font-semibold text-[#0F172A] hover:text-[#0EA5A4] ${compact ? 'text-sm' : 'text-base'}`}
           >
-            {application.job_title ?? 'وظيفة بدون عنوان'}
+            {application.job_title ?? t('applications.untitledJob')}
           </Link>
           <p className="mt-0.5 text-xs text-[#64748B]">
-            {application.company ?? 'شركة غير محددة'}
+            {application.company ?? t('common.companyUnspecified')}
             {application.location && ` • ${application.location}`}
           </p>
-          <p className="mt-1 text-xs text-[#94A3B8]">{formatRelativeDate(application.updated_at)}</p>
+          <p className="mt-1 text-xs text-[#94A3B8]">{formatRelativeDate(application.updated_at, language)}</p>
 
           {application.notes && !compact && (
-            <p className="mt-2 rounded-lg bg-[#F8FAFC] p-2 text-xs leading-5 text-[#475569]">
+            <p className="mt-2 rounded-lg bg-[var(--rushd-surface-alt)] p-2 text-xs leading-5 text-[#475569]">
               {application.notes.length > 100 ? `${application.notes.slice(0, 100)}...` : application.notes}
             </p>
           )}
@@ -121,7 +134,7 @@ function ApplicationCard({
             onChange={(e) => onStatusChange(e.target.value)}
           >
             {PIPELINE_STAGES.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
+              <option key={s.value} value={s.value}>{t(s.labelKey)}</option>
             ))}
           </select>
         )}
@@ -134,7 +147,7 @@ function ApplicationCard({
             className="inline-flex items-center gap-1 rounded-md bg-[#0EA5A4] px-2 py-1 text-xs font-medium text-white hover:bg-[#0F766E]"
           >
             <ExternalLink className="h-3 w-3" />
-            تقدم
+            {t('applications.apply')}
           </a>
         )}
 
@@ -144,17 +157,17 @@ function ApplicationCard({
           className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors ${
             application.notes
               ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
-              : 'text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#0F172A]'
+              : 'text-[#94A3B8] hover:bg-[var(--rushd-surface-alt)] hover:text-[#0F172A]'
           }`}
         >
           <MessageSquare className="h-3 w-3" />
-          {application.notes ? 'ملاحظات' : 'إضافة'}
+          {application.notes ? t('applications.notes.title') : t('applications.addNote')}
         </button>
 
         <button
           type="button"
           onClick={onDelete}
-          className="mr-auto rounded-md p-1 text-[#CBD5E1] transition-colors hover:bg-red-50 hover:text-red-500"
+          className="ms-auto rounded-md p-1 text-[#CBD5E1] transition-colors hover:bg-red-50 hover:text-red-500"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -176,6 +189,7 @@ function KanbanView({
   onNotesClick: (app: Application) => void
   onDelete: (id: string) => void
 }) {
+  const { t } = useTranslation()
   const grouped = PIPELINE_STAGES.map((stage) => ({
     ...stage,
     apps: applications.filter((a) => a.status === stage.value),
@@ -191,7 +205,7 @@ function KanbanView({
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className={`h-2.5 w-2.5 rounded-full ${stage.color}`} />
-              <h3 className="text-sm font-semibold text-[#0F172A]">{stage.label}</h3>
+              <h3 className="text-sm font-semibold text-[#0F172A]">{t(stage.labelKey)}</h3>
             </div>
             <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-[#64748B] shadow-sm">
               {stage.apps.length}
@@ -212,7 +226,7 @@ function KanbanView({
 
             {stage.apps.length === 0 && (
               <div className="rounded-xl border border-dashed border-[#CBD5E1]/60 py-8 text-center">
-                <p className="text-xs text-[#94A3B8]">لا توجد طلبات</p>
+                <p className="text-xs text-[var(--rushd-ink-soft)]">{t('applications.noApplicationsInStage')}</p>
               </div>
             )}
           </div>
@@ -237,6 +251,7 @@ function ListView({
   onNotesClick: (app: Application) => void
   onDelete: (id: string) => void
 }) {
+  const { t } = useTranslation()
   const filtered = statusFilter === 'all'
     ? applications
     : applications.filter((a) => a.status === statusFilter)
@@ -256,12 +271,12 @@ function ListView({
       {filtered.length === 0 && (
         <Card className="border border-dashed border-[#CBD5E1] py-12 text-center">
           <Briefcase className="mx-auto h-8 w-8 text-[#CBD5E1]" />
-          <p className="mt-3 text-sm text-[#64748B]">لا توجد طلبات</p>
+          <p className="mt-3 text-sm text-[#64748B]">{t('applications.noApplications')}</p>
           <Link
             to="/jobs"
             className="mt-3 inline-block text-sm font-medium text-[#0EA5A4] hover:text-[#0F766E]"
           >
-            ابحث عن وظائف وتقدم لها
+            {t('applications.browseJobs')}
           </Link>
         </Card>
       )}
@@ -272,6 +287,7 @@ function ListView({
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function ApplicationsPage() {
+  const { t, dir } = useTranslation()
   const [view, setView] = useState<ViewMode>('kanban')
   const [statusFilter, setStatusFilter] = useState('all')
   const [notesApp, setNotesApp] = useState<Application | null>(null)
@@ -309,17 +325,17 @@ export default function ApplicationsPage() {
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       {/* Header */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-[#0F172A]">نظام متابعة الطلبات</h1>
+          <h1 className="text-3xl font-bold text-[#0F172A]">{t('applications.title')}</h1>
           <p className="mt-2 text-sm text-[#64748B]">
-            تابع كل طلباتك من التقديم حتى القبول في مكان واحد.
+            {t('applications.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-xl bg-[#F1F5F9] p-1">
+          <div className="flex rounded-xl bg-[var(--rushd-surface-alt)] p-1">
             <button
               type="button"
               onClick={() => setView('kanban')}
@@ -342,7 +358,7 @@ export default function ApplicationsPage() {
           <Link to="/jobs">
             <Button size="sm">
               <Plus className="h-4 w-4" />
-              بحث عن وظائف
+              {t('applications.searchJobs')}
             </Button>
           </Link>
         </div>
@@ -351,19 +367,19 @@ export default function ApplicationsPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div className="rounded-2xl border border-[#E2E8F0] bg-white p-4">
-          <p className="text-xs text-[#64748B]">إجمالي الطلبات</p>
+          <p className="text-xs text-[#64748B]">{t('applications.stats.total')}</p>
           <p className="mt-1 text-2xl font-bold text-[#0F172A]">{totalApps}</p>
         </div>
         <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-          <p className="text-xs text-blue-600">تم التقديم</p>
+          <p className="text-xs text-blue-600">{t('applications.stats.applied')}</p>
           <p className="mt-1 text-2xl font-bold text-blue-700">{appliedCount}</p>
         </div>
         <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
-          <p className="text-xs text-amber-600">مقابلات</p>
+          <p className="text-xs text-amber-600">{t('applications.stats.interviewing')}</p>
           <p className="mt-1 text-2xl font-bold text-amber-700">{interviewCount}</p>
         </div>
         <div className="rounded-2xl border border-green-100 bg-green-50 p-4">
-          <p className="text-xs text-green-600">عروض</p>
+          <p className="text-xs text-green-600">{t('applications.stats.offered')}</p>
           <p className="mt-1 text-2xl font-bold text-green-700">{offeredCount}</p>
         </div>
       </div>
@@ -371,7 +387,7 @@ export default function ApplicationsPage() {
       {/* List view filter tabs */}
       {view === 'list' && (
         <div className="flex flex-wrap gap-2">
-          {APPLICATION_STATUSES.map((item) => {
+          {STATUS_FILTERS.map((item) => {
             const count = item.value === 'all'
               ? totalApps
               : applications.filter((a) => a.status === item.value).length
@@ -383,12 +399,12 @@ export default function ApplicationsPage() {
                 className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                   statusFilter === item.value
                     ? 'bg-[#0EA5A4] text-white'
-                    : 'bg-[#F1F5F9] text-[#64748B] hover:text-[#0F172A]'
+                    : 'bg-[var(--rushd-surface-alt)] text-[var(--rushd-ink-soft)] hover:text-[#0F172A]'
                 }`}
               >
-                {item.label}
+                {t(item.labelKey)}
                 {count > 0 && (
-                  <span className={`mr-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs ${
+                  <span className={`ms-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs ${
                     statusFilter === item.value ? 'bg-white/20' : 'bg-[#E2E8F0]'
                   }`}>
                     {count}

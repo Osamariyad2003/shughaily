@@ -12,28 +12,13 @@
 
 import cron from 'node-cron';
 import { query } from '../config/database';
-import { runSearchAgent } from '../services/searchAgent.service';
+import {
+  ensureAgentJobResultsTable,
+  recordSeenJobs,
+  runSearchAgent,
+} from '../services/searchAgent.service';
 import { jobSearchService } from '../services/jobSearch.service';
-
-// ── Bootstrap table ────────────────────────────────────────────────────
-
-async function ensureAgentJobResultsTable(): Promise<void> {
-  await query(
-    `CREATE TABLE IF NOT EXISTS agent_job_results (
-       id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-       agent_id   UUID NOT NULL REFERENCES search_agents(id) ON DELETE CASCADE,
-       job_id     UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
-       seen_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-       UNIQUE(agent_id, job_id)
-     )`,
-    [],
-  );
-  await query(
-    `CREATE INDEX IF NOT EXISTS idx_agent_job_results_agent
-       ON agent_job_results(agent_id)`,
-    [],
-  );
-}
+import { runEmailAutoApplyForAgent } from '../services/autoApplyRunner.service';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -51,26 +36,6 @@ async function getLearningTitles(userId: string): Promise<string[]> {
     [userId],
   );
   return rows.map((r) => r.title);
-}
-
-/** Record which jobs this agent has already seen. Returns count of truly new jobs. */
-async function recordSeenJobs(
-  agentId: string,
-  jobIds: string[],
-): Promise<number> {
-  if (jobIds.length === 0) return 0;
-
-  // Insert only IDs not already present (ON CONFLICT DO NOTHING), return inserted count.
-  const placeholders = jobIds.map((_, i) => `($1, $${i + 2})`).join(', ');
-  const result = await query(
-    `INSERT INTO agent_job_results (agent_id, job_id)
-     VALUES ${placeholders}
-     ON CONFLICT (agent_id, job_id) DO NOTHING`,
-    [agentId, ...jobIds],
-  );
-
-  // rowCount tells us how many were actually new.
-  return (result as unknown as { rowCount?: number }).rowCount ?? jobIds.length;
 }
 
 // ── Core run ───────────────────────────────────────────────────────────
@@ -107,8 +72,25 @@ async function runAllActiveAgents(): Promise<void> {
         continue;
       }
 
-      const allJobIds = result.jobs.map((j) => j.id);
-      const newCount = await recordSeenJobs(agent.id, allJobIds);
+      // result.new_jobs_count is already the true new-vs-seen count —
+      // runSearchAgent() records it into agent_job_results itself now.
+
+      // Email auto-apply: only acts on this agent's own scored jobs (has
+      // match_score, so the min-match threshold is meaningful) — never on
+      // the unscored "learned titles" search below. No-ops entirely unless
+      // the user has explicitly enabled it (see autoApplyRunner.service.ts).
+      try {
+        const autoApply = await runEmailAutoApplyForAgent(agent.id, agent.user_id, result.jobs);
+        if (autoApply.eligible > 0) {
+          console.log(
+            `[Scheduler]   auto-apply: ${autoApply.eligible} eligible, ${autoApply.sent} sent, ` +
+              `${autoApply.prepared - autoApply.sent} prepared/dry-run, ${autoApply.skippedDailyCap} capped, ${autoApply.failed} failed`,
+          );
+        }
+      } catch (err) {
+        // Non-critical — the search-agent run itself already succeeded.
+        console.error(`[Scheduler]   auto-apply failed for agent "${agent.name}":`, (err as Error).message);
+      }
 
       // If we have learning titles, fire an extra search with those titles to
       // find similar jobs the agent's own keywords might miss.
@@ -119,8 +101,7 @@ async function runAllActiveAgents(): Promise<void> {
             query: extraQuery,
             page: 1,
           });
-          const extraIds = extra.jobs.map((j) => j.id);
-          const extraNew = await recordSeenJobs(agent.id, extraIds);
+          const extraNew = await recordSeenJobs(agent.id, agent.user_id, extra.jobs);
           if (extraNew > 0) {
             console.log(
               `[Scheduler]   + ${extraNew} extra job(s) from learned titles`,
@@ -133,8 +114,8 @@ async function runAllActiveAgents(): Promise<void> {
 
       const elapsed = ((Date.now() - start) / 1000).toFixed(1);
       console.log(
-        `[Scheduler] Agent "${agent.name}": ${result.jobs.length} scored, ${newCount} new, ` +
-          `avg ${result.avg_match_score}% (${elapsed}s)`,
+        `[Scheduler] Agent "${agent.name}": ${result.jobs.length} scored, ${result.new_jobs_count} new, ` +
+          `avg ${result.avg_match_score}%${result.scoring_degraded ? ' (degraded: AI matcher partly unavailable)' : ''} (${elapsed}s)`,
       );
     } catch (err) {
       console.error(

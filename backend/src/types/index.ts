@@ -71,6 +71,14 @@ export interface Job {
   employment_type?: string | null;
   apply_url?: string | null;
   employer_logo?: string | null;
+  /** Contact email parsed from the posting at ingestion time. NULL = not apply-by-email. */
+  apply_email?: string | null;
+  /** The posting's actual publication date, normalized via
+   * parseJobPostedDate() from whatever format the source reported. NULL =
+   * unknown (many sources omit it), not "very old" — see the search-agent
+   * recency filter's missing-date policy. Distinct from created_at (when
+   * we ingested the row). */
+  posted_at?: Date | null;
   created_at: Date;
 }
 
@@ -227,12 +235,6 @@ export type SearchAgentWorkMode = 'onsite' | 'hybrid' | 'remote';
 
 export type SearchAgentCompanySize = 'startup' | 'small' | 'mid_market' | 'enterprise';
 
-export interface SearchAgentSalaryExpectation {
-  amount?: number | null;
-  currency?: string | null;
-  period: 'monthly' | 'yearly';
-}
-
 export interface SearchAgentInput {
   name: string;
   target_titles: string[];
@@ -241,7 +243,9 @@ export interface SearchAgentInput {
   work_modes: SearchAgentWorkMode[];
   industries: string[];
   company_sizes: SearchAgentCompanySize[];
-  salary_expectation?: SearchAgentSalaryExpectation | null;
+  /** Drop results older than this many days (based on Job.posted_at, via
+   * parseJobPostedDate()). Default 30 — "last 30 days". */
+  max_age_days: number;
   include_keywords: string[];
   exclude_keywords: string[];
   blacklist_companies: string[];
@@ -249,11 +253,16 @@ export interface SearchAgentInput {
   active?: boolean;
 }
 
+export type SearchAgentStatus = 'idle' | 'searching' | 'ready' | 'error';
+
 export interface SearchAgent extends SearchAgentInput {
   id: string;
   user_id: string;
-  salary_expectation: SearchAgentSalaryExpectation;
   active: boolean;
+  /** Lifecycle status for the async-create flow — 'searching' while the
+   * first (or a re-triggered) run is queued/in-flight; lets the frontend
+   * poll instead of the create request blocking on a full search. */
+  status: SearchAgentStatus;
   last_run_at?: Date | null;
   new_jobs_count: number;
   avg_match_score: number;
@@ -276,29 +285,51 @@ export interface CandidateProfileSummary {
   updated_at?: Date | null;
 }
 
-export interface SearchAgentQueryPlanSource {
-  source: string;
-  search_text: string;
-  filters: {
-    titles: string[];
-    locations: string[];
-    work_modes: SearchAgentWorkMode[];
-    seniority: SearchAgentSeniority[];
-    industries: string[];
-    company_sizes: SearchAgentCompanySize[];
-    salary_expectation: SearchAgentSalaryExpectation;
-  };
-  strategy: string;
-  crawl_hints: string[];
+// ---------- Email auto-apply ----------
+
+export interface AutoApplySettings {
+  id: string;
+  user_id: string;
+  enabled: boolean;
+  min_match_threshold: number;
+  daily_send_cap: number;
+  dry_run: boolean;
+  reviewed_first_send: boolean;
+  created_at: Date;
+  updated_at: Date;
 }
 
-export interface SearchAgentQueryPlan {
+export type AutoApplySettingsInput = Partial<
+  Pick<AutoApplySettings, 'enabled' | 'min_match_threshold' | 'daily_send_cap' | 'dry_run' | 'reviewed_first_send'>
+>;
+
+export type ApplyStatus = 'matched' | 'prepared' | 'sent' | 'bounced' | 'replied' | 'failed';
+
+export interface AgentJobResult {
+  id: string;
   agent_id: string;
-  generated_at: Date;
-  canonical_query: string;
-  hard_filters: {
-    exclude_keywords: string[];
-    blacklist_companies: string[];
-  };
-  sources: SearchAgentQueryPlanSource[];
+  job_id: string;
+  user_id: string;
+  seen_at: Date;
+  apply_status: ApplyStatus;
+  message_id?: string | null;
+  prepared_at?: Date | null;
+  sent_at?: Date | null;
+  bounced_at?: Date | null;
+  replied_at?: Date | null;
+  send_error?: string | null;
+}
+
+export interface AutoApplySendLogEntry {
+  id: string;
+  user_id: string;
+  job_id: string;
+  agent_id?: string | null;
+  to_email: string;
+  subject: string;
+  dry_run: boolean;
+  success: boolean;
+  message_id?: string | null;
+  error?: string | null;
+  created_at: Date;
 }

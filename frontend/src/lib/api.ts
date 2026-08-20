@@ -1,3 +1,5 @@
+import { useI18nStore } from '@/store/i18nStore'
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 
 interface ApiResponse<T> {
@@ -72,7 +74,7 @@ class ApiClient {
       const fallbackMessage =
         raw && !raw.trim().startsWith('<')
           ? raw
-          : response.statusText || 'حدث خطأ غير متوقع'
+          : response.statusText || useI18nStore.getState().t('common.unexpectedError')
 
       throw new Error(data?.error || fallbackMessage)
     }

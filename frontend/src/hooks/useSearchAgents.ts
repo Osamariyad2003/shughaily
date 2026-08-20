@@ -16,14 +16,6 @@ export function useCandidateProfileSummary() {
   })
 }
 
-export function useSearchAgentQueryPlan(id: string) {
-  return useQuery({
-    queryKey: ['search-agent-query-plan', id],
-    queryFn: () => searchAgentsService.getQueryPlan(id),
-    enabled: !!id,
-  })
-}
-
 export function useCreateSearchAgent() {
   const queryClient = useQueryClient()
 

@@ -4,7 +4,6 @@ import type {
   RecommendedJob,
   SearchAgent,
   SearchAgentInput,
-  SearchAgentQueryPlan,
 } from '@/lib/types'
 
 export interface RunSearchAgentResponse {
@@ -25,8 +24,6 @@ export const searchAgentsService = {
   deleteAgent: (id: string) => api.delete(`/search-agents/${id}`),
 
   getCandidateProfile: () => api.get<CandidateProfileSummary>('/search-agents/candidate-profile'),
-
-  getQueryPlan: (id: string) => api.get<SearchAgentQueryPlan>(`/search-agents/${id}/query-plan`),
 
   runAgent: (id: string) => api.post<RunSearchAgentResponse>(`/search-agents/${id}/run`),
 }

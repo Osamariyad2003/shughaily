@@ -1,6 +1,17 @@
 import { create } from 'zustand'
 import type { User } from '@/lib/types'
 import { api } from '@/lib/api'
+import { useI18nStore } from '@/store/i18nStore'
+
+// Applies the user's saved language preference as soon as we know it —
+// login, register, Google OAuth, and the /auth/me rehydrate on refresh
+// all go through this so the UI never briefly renders in the wrong
+// language/direction after auth resolves.
+function syncLanguageFromUser(user: User): void {
+  if (user.preferred_language === 'en' || user.preferred_language === 'ar') {
+    useI18nStore.getState().setLanguage(user.preferred_language)
+  }
+}
 
 interface AuthState {
   user: User | null
@@ -31,6 +42,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       })
       if (res.data) {
         api.setToken(res.data.token)
+        syncLanguageFromUser(res.data.user)
         set({
           user: res.data.user,
           token: res.data.token,
@@ -54,6 +66,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       })
       if (res.data) {
         api.setToken(res.data.token)
+        syncLanguageFromUser(res.data.user)
         set({
           user: res.data.user,
           token: res.data.token,
@@ -75,6 +88,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       })
       if (res.data) {
         api.setToken(res.data.token)
+        syncLanguageFromUser(res.data.user)
         set({
           user: res.data.user,
           token: res.data.token,
@@ -99,6 +113,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const res = await api.get<User>('/auth/me')
       if (res.data) {
+        syncLanguageFromUser(res.data)
         set({ user: res.data, isAuthenticated: true })
       }
     } catch {

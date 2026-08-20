@@ -34,7 +34,7 @@ export default function ChatBubble({ content, isUser, timestamp }: ChatBubblePro
         </div>
         <div
           className={cn(
-            'bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl rounded-tl-sm px-4 py-3'
+            'bg-[var(--rushd-surface-alt)] border border-[#E2E8F0] rounded-2xl rounded-tl-sm px-4 py-3'
           )}
         >
           <p className="text-sm leading-relaxed text-[#0F172A] whitespace-pre-wrap">{content}</p>

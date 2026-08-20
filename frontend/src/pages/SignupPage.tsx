@@ -35,7 +35,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC] px-4 py-8" dir="rtl">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--rushd-surface-alt)] px-4 py-8" dir="rtl">
       <Card className="w-full max-w-md border border-[#E2E8F0]">
         <div className="mb-6 text-center">
           <p className="text-sm font-medium text-[#0EA5A4]">الشغيلي</p>

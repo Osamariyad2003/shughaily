@@ -1,28 +1,7 @@
-export const APP_NAME = 'الشغيلي'
-export const APP_TAGLINE = 'مساعدك الذكي للتوظيف'
-
-export const WORK_TYPES = [
-  { value: 'full_time', label: 'دوام كامل' },
-  { value: 'part_time', label: 'دوام جزئي' },
-  { value: 'remote', label: 'عن بعد' },
-  { value: 'contract', label: 'عقد مؤقت' },
-  { value: 'freelance', label: 'عمل حر' },
-] as const
-
-export const APPLICATION_STATUSES = [
-  { value: 'all', label: 'الكل' },
-  { value: 'saved', label: 'تم الحفظ' },
-  { value: 'applied', label: 'تم التقديم' },
-  { value: 'interviewing', label: 'مقابلة' },
-  { value: 'offered', label: 'عرض' },
-  { value: 'rejected', label: 'مرفوض' },
-] as const
-
-export const COPILOT_QUICK_PROMPTS = [
-  'حلل سيرتي الذاتية',
-  'اقترح وظائف مناسبة لي',
-  'اكتب خطاب تغطية',
-  'حضرني للمقابلة',
-  'كيف أحسن سيرتي الذاتية؟',
-  'ما هي المهارات المطلوبة؟',
-] as const
+// This file previously held hardcoded-Arabic UI constants (APP_NAME,
+// WORK_TYPES, APPLICATION_STATUSES, COPILOT_QUICK_PROMPTS). They're now
+// superseded by the i18n system — see src/lib/locales/ (translation keys)
+// and src/store/i18nStore.ts (the `t()`/`useTranslation()` hook). Nothing
+// in the app imports from this file anymore as of the i18n migration;
+// left in place (empty) rather than deleted in case external tooling
+// references the path.

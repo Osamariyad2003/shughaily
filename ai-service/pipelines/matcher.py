@@ -2,10 +2,61 @@
 
 from __future__ import annotations
 
+import json
+import logging
+import re
+import unicodedata
+from pathlib import Path
+
 import numpy as np
 
 from prompts.templates import MATCH_EXPLANATION_PROMPT
 from utils.arabic import normalize_arabic
+
+logger = logging.getLogger(__name__)
+
+# Curated variant-spelling -> canonical-form vocabulary, kept in an editable
+# JSON file (not inline) so extending it — new abbreviations, new Arabic
+# transliterations — never needs a code change/deploy. Deliberately modest
+# rather than exhaustive; extend as real false-negatives ("this obviously
+# matches but didn't") show up.
+_SKILL_ALIASES_PATH = Path(__file__).resolve().parent.parent / "data" / "skill_aliases.json"
+
+
+def _collapse_separators(text: str) -> str:
+    collapsed = re.sub(r"[.\-_/]", " ", text)
+    return re.sub(r"\s+", " ", collapsed).strip()
+
+
+def _load_skill_aliases(path: Path) -> dict[str, str]:
+    """Loads skill_aliases.json and re-keys every alias through the exact
+    same normalization pipeline _canonical_skill's input has already been
+    through (NFKC -> Arabic normalization -> lowercase -> separator
+    collapse) by the time it does the lookup. This lets the JSON file be
+    authored in natural spelling (real Arabic diacritics, "node.js" with a
+    dot, etc.) instead of requiring whoever edits it to hand-compute the
+    internal normalized key — the loader reconciles that, not the editor.
+    """
+    try:
+        with open(path, encoding="utf-8") as f:
+            raw = json.load(f)
+    except FileNotFoundError:
+        logger.warning("skill_aliases.json not found at %s — skill aliasing disabled.", path)
+        return {}
+    except json.JSONDecodeError as exc:
+        logger.warning("skill_aliases.json is malformed (%s) — skill aliasing disabled.", exc)
+        return {}
+
+    aliases: dict[str, str] = {}
+    for key, value in raw.items():
+        normalized_key = _collapse_separators(
+            normalize_arabic(unicodedata.normalize("NFKC", str(key))).lower()
+        )
+        aliases[normalized_key] = value
+    return aliases
+
+
+SKILL_ALIASES: dict[str, str] = _load_skill_aliases(_SKILL_ALIASES_PATH)
 
 
 class MatcherPipeline:
@@ -17,24 +68,59 @@ class MatcherPipeline:
 
     @staticmethod
     def _norm_skill(s: str) -> str:
-        return normalize_arabic(str(s)).lower().strip()
+        # NFKC first: canonicalizes Unicode representation (fullwidth forms,
+        # compatibility characters, some Arabic presentation forms) so two
+        # byte-different-but-visually-identical strings normalize the same
+        # way before the Arabic-specific tashkeel/alef-variant handling and
+        # the alias lookup ever see them.
+        return normalize_arabic(unicodedata.normalize("NFKC", str(s))).lower().strip()
 
     @staticmethod
-    def _fuzzy_skill_match(user_skill: str, job_skill: str) -> bool:
-        """Return True if user_skill covers job_skill via substring or token overlap."""
+    def _canonical_skill(skill: str) -> str:
+        """Collapse separators and resolve known variant spellings via
+        SKILL_ALIASES, so "JS"/"React.js"/"Postgres"/"بايثون" all line up
+        with their canonical forms before comparison. Input is expected to
+        already be _norm_skill()-normalized (NFKC + Arabic-normalized +
+        lowercased) — this only handles the separator-collapse + alias step
+        on top of that."""
+        collapsed = _collapse_separators(skill)
+        return SKILL_ALIASES.get(collapsed, collapsed)
+
+    @classmethod
+    def _fuzzy_skill_match(cls, user_skill: str, job_skill: str) -> bool:
+        """Return True if user_skill covers job_skill, via exact match, a
+        known alias, or word-boundary containment — never a raw substring
+        check. Substring matching (the old behavior) produces real false
+        positives: "java" is a substring of "javascript", "go" of "google",
+        and single-letter skills like "r" match almost anything.
+        """
         if not user_skill or not job_skill:
             return False
         if user_skill == job_skill:
             return True
-        # Substring either direction (e.g. "react" vs "react.js", "node" vs "node.js")
-        if user_skill in job_skill or job_skill in user_skill:
+
+        u = cls._canonical_skill(user_skill)
+        j = cls._canonical_skill(job_skill)
+        if u == j:
             return True
-        # Token overlap (for multi-word skills)
-        u_tokens = set(user_skill.replace("-", " ").replace(".", " ").split())
-        j_tokens = set(job_skill.replace("-", " ").replace(".", " ").split())
-        if u_tokens and j_tokens and u_tokens & j_tokens:
+
+        # Word-boundary containment: u (or j) must appear as whole word(s)
+        # inside the other, not merely as a substring — "java" no longer
+        # matches inside "javascript" since there's no word boundary
+        # between "java" and the following "script".
+        if re.search(rf"\b{re.escape(u)}\b", j) or re.search(rf"\b{re.escape(j)}\b", u):
+            return True
+
+        # Token-overlap fallback for genuinely multi-word skills (e.g.
+        # "machine learning engineer" vs "machine learning") — only when at
+        # least one side is actually multi-word, so this can't degrade back
+        # into single-token substring-style false positives.
+        u_tokens = set(u.split())
+        j_tokens = set(j.split())
+        if (len(u_tokens) > 1 or len(j_tokens) > 1) and u_tokens and j_tokens:
             shared = len(u_tokens & j_tokens)
             return shared / max(len(j_tokens), 1) >= 0.5
+
         return False
 
     @classmethod

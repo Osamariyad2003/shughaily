@@ -26,18 +26,10 @@ import {
 } from 'lucide-react'
 
 import SearchAgentBuilderModal from '@/components/jobs/SearchAgentBuilderModal'
-
-const SOURCE_LABELS: Record<string, string> = {
-  linkedin: 'LinkedIn',
-  google_jobs: 'Google Jobs',
-  remotive: 'Remotive',
-  remoteok: 'RemoteOK',
-  arbeitnow: 'Arbeitnow',
-  themuse: 'The Muse',
-}
 import Badge from '@/components/ui/Badge'
 import Card from '@/components/ui/Card'
 import Spinner from '@/components/ui/Spinner'
+import { Button } from '@/components/rushd'
 import { useCreateApplication } from '@/hooks/useApplications'
 import { useDashboardStats } from '@/hooks/useDashboard'
 import { useRecommendedJobs, useSaveJob } from '@/hooks/useJobs'
@@ -51,83 +43,97 @@ import {
 } from '@/hooks/useSearchAgents'
 import { jobsService } from '@/services/jobs.service'
 import { cn, truncateText } from '@/lib/utils'
+import { useTranslation } from '@/store/i18nStore'
+import type { TranslationKey } from '@/lib/locales'
 import type { Job, RecommendedJob, SearchAgent, SearchAgentInput } from '@/lib/types'
+
+const SOURCE_LABELS: Record<string, string> = {
+  linkedin: 'LinkedIn',
+  google_jobs: 'Google Jobs',
+  remotive: 'Remotive',
+  remoteok: 'RemoteOK',
+  arbeitnow: 'Arbeitnow',
+  themuse: 'The Muse',
+}
 
 type TabKey = 'recommended' | 'all' | 'high-match' | 'saved' | 'applied'
 
-const TABS: { key: TabKey; label: string; icon: typeof Target }[] = [
-  { key: 'recommended', label: 'موصى بها', icon: Target },
-  { key: 'all', label: 'جميع الوظائف', icon: Globe },
-  { key: 'high-match', label: 'تطابق عالٍ', icon: TrendingUp },
-  { key: 'saved', label: 'محفوظة', icon: Bookmark },
-  { key: 'applied', label: 'تم التقديم', icon: CheckCircle2 },
+const TABS: { key: TabKey; labelKey: TranslationKey; icon: typeof Target }[] = [
+  { key: 'recommended', labelKey: 'jobs.tabs.recommended', icon: Target },
+  { key: 'all', labelKey: 'jobs.tabs.all', icon: Globe },
+  { key: 'high-match', labelKey: 'jobs.tabs.highMatch', icon: TrendingUp },
+  { key: 'saved', labelKey: 'jobs.tabs.saved', icon: Bookmark },
+  { key: 'applied', labelKey: 'jobs.tabs.applied', icon: CheckCircle2 },
 ]
 
-function timeAgo(iso?: string): string {
+function timeAgo(iso: string | undefined, t: (key: TranslationKey, vars?: Record<string, string | number>) => string, locale: 'ar' | 'en'): string {
   if (!iso) return ''
   const ms = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(ms / 60000)
-  if (mins < 1) return 'الآن'
-  if (mins < 60) return `قبل ${mins} د`
+  if (mins < 1) return t('jobs.timeAgo.now')
+  if (mins < 60) return t('jobs.timeAgo.minutes', { n: mins })
   const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `قبل ${hrs} س`
+  if (hrs < 24) return t('jobs.timeAgo.hours', { n: hrs })
   const days = Math.floor(hrs / 24)
-  if (days < 7) return `قبل ${days} يوم`
-  return new Date(iso).toLocaleDateString('ar-SA')
+  if (days < 7) return t('jobs.timeAgo.days', { n: days })
+  return new Date(iso).toLocaleDateString(locale === 'en' ? 'en-US' : 'ar-SA')
 }
 
 function matchTone(score?: number): { bg: string; text: string; ring: string } {
-  if (!score && score !== 0) return { bg: 'bg-slate-100', text: 'text-slate-500', ring: 'ring-slate-200' }
+  if (!score && score !== 0) return { bg: 'bg-[var(--rushd-surface-alt)]', text: 'text-[var(--rushd-ink-soft)]', ring: 'ring-[var(--rushd-border-strong)]' }
   if (score >= 80) return { bg: 'bg-emerald-50', text: 'text-emerald-700', ring: 'ring-emerald-200' }
-  if (score >= 60) return { bg: 'bg-teal-50', text: 'text-teal-700', ring: 'ring-teal-200' }
+  if (score >= 60) return { bg: 'bg-[#E3EFEE]', text: 'text-[#0F5C5C]', ring: 'ring-[#0F5C5C]/20' }
   if (score >= 40) return { bg: 'bg-amber-50', text: 'text-amber-700', ring: 'ring-amber-200' }
   return { bg: 'bg-rose-50', text: 'text-rose-700', ring: 'ring-rose-200' }
 }
 
-function formatAgentSubline(agent: SearchAgent): string {
+function formatAgentSubline(agent: SearchAgent, allModesLabel: string): string {
   const titles = agent.target_titles.slice(0, 2).join(' • ')
   const locations = agent.preferred_locations.slice(0, 2).join(' • ')
-  const workModes = agent.work_modes.length > 0 ? agent.work_modes.join(' • ') : 'كل الأنماط'
+  const workModes = agent.work_modes.length > 0 ? agent.work_modes.join(' • ') : allModesLabel
   return [titles, locations, workModes].filter(Boolean).join(' • ')
 }
 
-function buildSearchInputFromAgent(agent: SearchAgent): string {
+function buildSearchInputFromAgent(agent: SearchAgent, remoteLabel: string): string {
   const parts = [
     agent.target_titles.join(' / '),
     agent.preferred_locations[0],
-    agent.work_modes.includes('remote') ? 'عن بُعد' : '',
+    agent.work_modes.includes('remote') ? remoteLabel : '',
   ].filter(Boolean)
 
   return parts.join(' • ')
 }
 
 function HeroSection({ onCreateAgent, onBrowse }: { onCreateAgent: () => void; onBrowse: () => void }) {
+  const { t } = useTranslation()
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-[#E2E8F0] bg-gradient-to-bl from-[#0EA5A4] via-[#0F766E] to-[#134E4A] p-8 text-white shadow-lg md:p-10">
+    <div className="relative overflow-hidden rounded-3xl border border-[#E2E8F0] bg-gradient-to-bl from-[#0F5C5C] via-[#0C4A4A] to-[#14201E] p-8 text-white shadow-lg md:p-10">
       <div className="absolute -left-12 -top-12 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
       <div className="absolute -bottom-16 -right-8 h-56 w-56 rounded-full bg-emerald-300/10 blur-3xl" />
       <div className="relative max-w-3xl">
         <h1 className="mt-2 text-3xl font-bold leading-tight md:text-4xl">
-          اكتشف وظائف تناسبك تلقائيًا
+          {t('jobs.hero.title')}
         </h1>
-        <p className="mt-3 text-base text-teal-50 md:text-lg">
-          أنشئ عدة وكلاء بحث، اربطهم بملفك المهني، ودع المنصة تبحث يوميًا عبر LinkedIn وصفحات الشركات وأنظمة ATS.
+        <p className="mt-3 text-base text-[#E3EFEE] md:text-lg">
+          {t('jobs.hero.description')}
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <button
+          <Button
             onClick={onCreateAgent}
-            className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-[#0F766E] shadow-sm transition hover:bg-teal-50"
+            variant="secondary"
+            icon={<Plus className="h-4 w-4" />}
+            className="border-transparent bg-white text-[#0F5C5C] shadow-sm hover:bg-[#E3EFEE]"
           >
-            <Plus className="h-4 w-4" />
-            إنشاء وكيل بحث
-          </button>
-          <button
+            {t('jobs.hero.createAgent')}
+          </Button>
+          <Button
             onClick={onBrowse}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+            variant="ghost"
+            icon={<Search className="h-4 w-4" />}
+            className="border border-white/30 bg-white/10 text-white backdrop-blur hover:bg-white/20 hover:text-white"
           >
-            <Search className="h-4 w-4" />
-            تصفح الوظائف يدويًا
-          </button>
+            {t('jobs.hero.browseManually')}
+          </Button>
         </div>
       </div>
     </div>
@@ -145,38 +151,34 @@ function SmartSearchBar({
   onSubmit: () => void
   loading: boolean
 }) {
-  const chips = ['المسمى', 'الموقع', 'عن بُعد', 'نطاق الراتب', 'كلمات مطلوبة', 'كلمات مستبعدة']
+  const { t } = useTranslation()
+  const chips: TranslationKey[] = ['jobs.search.title', 'jobs.search.location', 'jobs.search.remote', 'jobs.search.salaryRange', 'jobs.search.requiredKeywords', 'jobs.search.excludedKeywords']
 
   return (
     <Card className="border border-[#E2E8F0] bg-white p-5">
-      <div className="flex items-center gap-3 rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 transition focus-within:border-[#0EA5A4] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0EA5A4]/20">
-        <Search className="h-5 w-5 shrink-0 text-[#0EA5A4]" />
+      <div className="flex items-center gap-3 rounded-2xl border border-[#E2E8F0] bg-[var(--rushd-surface-alt)] px-4 py-3 transition focus-within:border-[#0F5C5C] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#0F5C5C]/20">
+        <Search className="h-5 w-5 shrink-0 text-[#0F5C5C]" />
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
-          placeholder="Backend Engineer • الرياض • عن بُعد"
+          placeholder={t('jobs.search.placeholder')}
           className="flex-1 bg-transparent text-sm text-[#0F172A] outline-none placeholder:text-[#94A3B8]"
         />
-        <button
-          onClick={onSubmit}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-[#0EA5A4] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0F766E] disabled:opacity-60"
-        >
-          {loading ? <Spinner size="sm" /> : <Search className="h-4 w-4" />}
-          ابحث
-        </button>
+        <Button onClick={onSubmit} disabled={loading} icon={loading ? <Spinner size="sm" /> : <Search className="h-4 w-4" />}>
+          {t('jobs.search.submit')}
+        </Button>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        {chips.map((chip) => (
+        {chips.map((chipKey) => (
           <button
-            key={chip}
+            key={chipKey}
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#E2E8F0] bg-white px-3 py-1 text-xs font-medium text-[#475569] transition hover:border-[#0EA5A4] hover:text-[#0EA5A4]"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#E2E8F0] bg-white px-3 py-1 text-xs font-medium text-[#475569] transition hover:border-[#0F5C5C] hover:text-[#0F5C5C]"
           >
             <Filter className="h-3 w-3" />
-            {chip}
+            {t(chipKey)}
           </button>
         ))}
       </div>
@@ -198,7 +200,7 @@ function StatCard({
   tone: 'teal' | 'emerald' | 'violet' | 'amber'
 }) {
   const tones = {
-    teal: 'from-teal-50 to-teal-100/40 text-[#0F766E] ring-teal-200',
+    teal: 'from-[#E3EFEE] to-[#E3EFEE]/40 text-[#0F5C5C] ring-[#0F5C5C]/20',
     emerald: 'from-emerald-50 to-emerald-100/40 text-emerald-700 ring-emerald-200',
     violet: 'from-violet-50 to-violet-100/40 text-violet-700 ring-violet-200',
     amber: 'from-amber-50 to-amber-100/40 text-amber-700 ring-amber-200',
@@ -233,62 +235,80 @@ function AgentCard({
   onDelete: () => void
   onView: () => void
 }) {
+  const { t, language } = useTranslation()
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-      <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-gradient-to-br from-teal-100 to-transparent opacity-60" />
+      <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-gradient-to-br from-[#E3EFEE] to-transparent opacity-60" />
       <div className="relative">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-[#0F766E] ring-1 ring-teal-200">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#E3EFEE] text-[#0F5C5C] ring-1 ring-[#0F5C5C]/20">
               <Search className="h-4 w-4" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-[#0F172A]">{agent.name}</h3>
-              <p className="mt-0.5 text-xs text-[#64748B]">{formatAgentSubline(agent) || 'كل المسميات • كل المواقع • كل الأنماط'}</p>
+              <p className="mt-0.5 text-xs text-[#64748B]">{formatAgentSubline(agent, t('jobs.allWorkModes')) || t('jobs.agent.allTitlesLocationsModes')}</p>
             </div>
           </div>
-          <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1', agent.active ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-slate-100 text-slate-600 ring-slate-200')}>
+          <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1', agent.active ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-[var(--rushd-surface-alt)] text-[var(--rushd-ink-soft)] ring-[var(--rushd-border-strong)]')}>
             <span className={cn('h-1.5 w-1.5 rounded-full', agent.active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400')} />
-            {agent.active ? 'نشط' : 'متوقف'}
+            {agent.active ? t('jobs.agent.active') : t('jobs.agent.stopped')}
           </span>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 text-center">
-          <div className="rounded-xl bg-[#F8FAFC] p-3">
-            <p className="text-[10px] font-medium text-[#64748B]">جديد اليوم</p>
+          <div className="rounded-xl bg-[var(--rushd-surface-alt)] p-3">
+            <p className="text-[10px] font-medium text-[var(--rushd-ink-soft)]">{t('jobs.agent.newToday')}</p>
             <p className="mt-1 text-lg font-bold text-[#0F172A]">{agent.new_jobs_count}</p>
           </div>
-          <div className="rounded-xl bg-teal-50 p-3 ring-1 ring-teal-100">
-            <p className="text-[10px] font-medium text-[#0F766E]">متوسط التطابق</p>
-            <p className="mt-1 text-lg font-bold text-[#0F766E]">{Math.round(agent.avg_match_score)}%</p>
+          <div className="rounded-xl bg-[#E3EFEE] p-3 ring-1 ring-[#0F5C5C]/15">
+            <p className="text-[10px] font-medium text-[#0F5C5C]">{t('jobs.agent.avgMatch')}</p>
+            <p className="mt-1 text-lg font-bold text-[#0F5C5C]">{Math.round(agent.avg_match_score)}%</p>
           </div>
         </div>
 
         {agent.last_run_at && (
           <p className="mt-3 text-center text-[10px] text-[#94A3B8]">
-            آخر تشغيل: {timeAgo(agent.last_run_at)}
-            {agent.active && <span className="mr-1">• يعمل تلقائياً كل ساعتين</span>}
+            {t('jobs.agent.lastRun', { time: timeAgo(agent.last_run_at, t, language) })}
+            {agent.active && <span className="mx-1">{t('jobs.agent.autoRunsEvery2h')}</span>}
           </p>
         )}
         {!agent.last_run_at && agent.active && (
           <p className="mt-3 text-center text-[10px] text-[#94A3B8]">
-            لم يتم التشغيل بعد • سيعمل تلقائياً قريباً
+            {t('jobs.agent.notRunYet')}
           </p>
         )}
 
         <div className="mt-3 flex items-center gap-2">
-          <button onClick={onView} className="flex-1 rounded-lg bg-[#0EA5A4] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#0F766E]">
-            عرض النتائج
-          </button>
-          <button onClick={onToggle} title={agent.active ? 'إيقاف' : 'تشغيل'} className="rounded-lg border border-[#E2E8F0] bg-white p-1.5 text-[#475569] transition hover:border-[#0EA5A4] hover:text-[#0EA5A4]">
-            {agent.active ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-          </button>
-          <button onClick={onEdit} title="تعديل" className="rounded-lg border border-[#E2E8F0] bg-white p-1.5 text-[#475569] transition hover:border-amber-300 hover:text-amber-600">
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          <button onClick={onDelete} title="حذف" className="rounded-lg border border-[#E2E8F0] bg-white p-1.5 text-[#475569] transition hover:border-rose-300 hover:text-rose-600">
-            <X className="h-3.5 w-3.5" />
-          </button>
+          <Button onClick={onView} size="sm" className="flex-1">
+            {t('jobs.agent.viewResults')}
+          </Button>
+          <Button
+            onClick={onToggle}
+            title={agent.active ? t('jobs.agent.stop') : t('jobs.agent.start')}
+            aria-label={agent.active ? t('jobs.agent.stopAgent') : t('jobs.agent.startAgent')}
+            variant="secondary"
+            size="sm"
+            icon={agent.active ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+          />
+          <Button
+            onClick={onEdit}
+            title={t('jobs.agent.edit')}
+            aria-label={t('jobs.agent.editAgent')}
+            variant="secondary"
+            size="sm"
+            icon={<Pencil className="h-3.5 w-3.5" />}
+            className="hover:border-amber-300 hover:text-amber-600"
+          />
+          <Button
+            onClick={onDelete}
+            title={t('jobs.agent.delete')}
+            aria-label={t('jobs.agent.deleteAgent')}
+            variant="secondary"
+            size="sm"
+            icon={<X className="h-3.5 w-3.5" />}
+            className="hover:border-rose-300 hover:text-rose-600"
+          />
         </div>
       </div>
     </div>
@@ -296,13 +316,14 @@ function AgentCard({
 }
 
 function NewAgentCard({ onClick }: { onClick: () => void }) {
+  const { t } = useTranslation()
   return (
-    <button onClick={onClick} className="group flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#CBD5E1] bg-white/50 p-5 text-[#64748B] transition hover:border-[#0EA5A4] hover:bg-teal-50/40 hover:text-[#0F766E]">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-[#0F766E] ring-1 ring-teal-200 transition group-hover:scale-110">
+    <button onClick={onClick} className="group flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#CBD5E1] bg-white/50 p-5 text-[#64748B] transition hover:border-[#0F5C5C] hover:bg-[#E3EFEE]/40 hover:text-[#0C4A4A]">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E3EFEE] text-[#0F5C5C] ring-1 ring-[#0F5C5C]/20 transition group-hover:scale-110">
         <Plus className="h-5 w-5" />
       </div>
-      <p className="mt-3 text-sm font-semibold">إنشاء وكيل بحث جديد</p>
-      <p className="mt-0.5 text-xs">احفظ تفضيلاتك وابحث تلقائيًا كل يوم</p>
+      <p className="mt-3 text-sm font-semibold">{t('jobs.newAgentCard.title')}</p>
+      <p className="mt-0.5 text-xs">{t('jobs.newAgentCard.subtitle')}</p>
     </button>
   )
 }
@@ -322,6 +343,7 @@ function JobListItem({
   onHide: () => void
   onApply: () => void
 }) {
+  const { t, language } = useTranslation()
   const score = job.match_score
   const tone = matchTone(score)
 
@@ -331,7 +353,7 @@ function JobListItem({
       className={cn(
         'group cursor-pointer rounded-2xl border bg-white p-4 transition',
         selected
-          ? 'border-[#0EA5A4] bg-teal-50/30 shadow-md ring-2 ring-[#0EA5A4]/20'
+          ? 'border-[#0F5C5C] bg-[#E3EFEE]/30 shadow-md ring-2 ring-[#0F5C5C]/20'
           : 'border-[#E2E8F0] hover:border-[#94A3B8] hover:shadow-sm',
       )}
     >
@@ -341,7 +363,7 @@ function JobListItem({
           <p className="mt-0.5 truncate text-xs text-[#64748B]">
             <span className="inline-flex items-center gap-1">
               <Building2 className="h-3 w-3" />
-              {job.company ?? 'شركة غير محددة'}
+              {job.company ?? t('common.companyUnspecified')}
             </span>
             {job.location && (
               <>
@@ -357,7 +379,7 @@ function JobListItem({
         {score !== undefined && (
           <div className={cn('shrink-0 rounded-xl px-2.5 py-1 text-center ring-1', tone.bg, tone.ring)}>
             <p className={cn('text-sm font-bold leading-none', tone.text)}>{Math.round(score)}%</p>
-            <p className={cn('mt-0.5 text-[9px] font-medium', tone.text)}>تطابق</p>
+            <p className={cn('mt-0.5 text-[9px] font-medium', tone.text)}>{t('jobs.jobItem.match')}</p>
           </div>
         )}
       </div>
@@ -365,14 +387,14 @@ function JobListItem({
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         {job.employment_type && <Badge variant="neutral">{job.employment_type}</Badge>}
         {job.source && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-0.5 text-[10px] text-slate-500">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--rushd-surface-alt)] px-2 py-0.5 text-[10px] text-[var(--rushd-ink-soft)]">
             <Globe className="h-2.5 w-2.5" />
             {SOURCE_LABELS[job.source] ?? job.source.replace('_', ' ')}
           </span>
         )}
-        <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-[#94A3B8]">
+        <span className="ms-auto inline-flex items-center gap-1 text-[10px] text-[#94A3B8]">
           <Clock className="h-2.5 w-2.5" />
-          {timeAgo(job.created_at)}
+          {timeAgo(job.created_at, t, language)}
         </span>
       </div>
 
@@ -386,39 +408,45 @@ function JobListItem({
               e.stopPropagation()
               onApply()
             }}
-            className="inline-flex items-center gap-1 rounded-lg bg-[#0EA5A4] px-2.5 py-1 text-[10px] font-bold text-white transition hover:bg-[#0F766E]"
+            className="rushd-btn rushd-btn--primary rushd-btn--sm"
           >
-            <ExternalLink className="h-3 w-3" /> التقديم
+            <ExternalLink className="h-3 w-3" /> {t('jobs.jobItem.apply')}
           </a>
         ) : (
-          <button
+          <Button
             onClick={(e) => {
               e.stopPropagation()
               onApply()
             }}
-            className="inline-flex items-center gap-1 rounded-lg bg-[#0EA5A4] px-2.5 py-1 text-[10px] font-bold text-white transition hover:bg-[#0F766E]"
+            size="sm"
+            icon={<ExternalLink className="h-3 w-3" />}
           >
-            <ExternalLink className="h-3 w-3" /> التقديم
-          </button>
+            {t('jobs.jobItem.apply')}
+          </Button>
         )}
-        <button
+        <Button
           onClick={(e) => {
             e.stopPropagation()
             onSave()
           }}
-          className="inline-flex items-center gap-1 rounded-lg border border-[#E2E8F0] bg-white px-2 py-1 text-[10px] font-medium text-[#475569] transition hover:border-[#0EA5A4] hover:text-[#0EA5A4]"
+          variant="secondary"
+          size="sm"
+          icon={<Bookmark className="h-3 w-3" />}
         >
-          <Bookmark className="h-3 w-3" /> حفظ
-        </button>
-        <button
+          {t('jobs.jobItem.save')}
+        </Button>
+        <Button
           onClick={(e) => {
             e.stopPropagation()
             onHide()
           }}
-          className="inline-flex items-center gap-1 rounded-lg border border-[#E2E8F0] bg-white px-2 py-1 text-[10px] font-medium text-[#475569] transition hover:border-rose-300 hover:text-rose-600"
+          variant="secondary"
+          size="sm"
+          icon={<EyeOff className="h-3 w-3" />}
+          className="hover:border-rose-300 hover:text-rose-600"
         >
-          <EyeOff className="h-3 w-3" /> إخفاء
-        </button>
+          {t('jobs.jobItem.hide')}
+        </Button>
       </div>
     </div>
   )
@@ -433,12 +461,14 @@ function JobDetailsPanel({
   onApply: () => void
   onSave: () => void
 }) {
+  const { t } = useTranslation()
+
   if (!job) {
     return (
       <Card className="sticky top-6 flex min-h-[400px] flex-col items-center justify-center border border-dashed border-[#CBD5E1] text-center">
         <Eye className="h-10 w-10 text-[#CBD5E1]" />
-        <p className="mt-3 text-sm font-medium text-[#0F172A]">اختر وظيفة من القائمة</p>
-        <p className="mt-1 text-xs text-[#64748B]">سيظهر هنا التحليل ونقاط القوة وفرصة التقديم</p>
+        <p className="mt-3 text-sm font-medium text-[#0F172A]">{t('jobs.details.selectPrompt')}</p>
+        <p className="mt-1 text-xs text-[#64748B]">{t('jobs.details.selectHint')}</p>
       </Card>
     )
   }
@@ -452,7 +482,7 @@ function JobDetailsPanel({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-bold text-[#0F172A]">{job.title}</h2>
-            <p className="mt-1 text-sm text-[#64748B]">{job.company ?? 'شركة غير محددة'}</p>
+            <p className="mt-1 text-sm text-[#64748B]">{job.company ?? t('common.companyUnspecified')}</p>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[#475569]">
               {job.location && (
                 <span className="inline-flex items-center gap-1">
@@ -469,7 +499,7 @@ function JobDetailsPanel({
               {job.salary_text && (
                 <>
                   <span>•</span>
-                  <span className="font-semibold text-[#0F766E]">{job.salary_text}</span>
+                  <span className="font-semibold text-[#0F5C5C]">{job.salary_text}</span>
                 </>
               )}
             </div>
@@ -477,7 +507,7 @@ function JobDetailsPanel({
           {score !== undefined && (
             <div className={cn('flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl ring-2', tone.bg, tone.ring)}>
               <p className={cn('text-xl font-bold leading-none', tone.text)}>{Math.round(score)}%</p>
-              <p className={cn('mt-0.5 text-[9px] font-semibold', tone.text)}>تطابق</p>
+              <p className={cn('mt-0.5 text-[9px] font-semibold', tone.text)}>{t('jobs.jobItem.match')}</p>
             </div>
           )}
         </div>
@@ -485,9 +515,9 @@ function JobDetailsPanel({
 
       <div className="space-y-4 p-5">
         {job.explanation_ar && (
-          <div className="rounded-xl bg-gradient-to-bl from-teal-50 to-emerald-50/50 p-4 ring-1 ring-teal-100">
-            <p className="flex items-center gap-1.5 text-xs font-bold text-[#0F766E]">
-              لماذا تناسبك هذه الوظيفة
+          <div className="rounded-xl bg-gradient-to-bl from-[#E3EFEE] to-emerald-50/50 p-4 ring-1 ring-[#0F5C5C]/15">
+            <p className="flex items-center gap-1.5 text-xs font-bold text-[#0F5C5C]">
+              {t('jobs.details.whyFits')}
             </p>
             <p className="mt-2 text-xs leading-6 text-[#334155]">{job.explanation_ar}</p>
           </div>
@@ -497,7 +527,7 @@ function JobDetailsPanel({
           <div>
             <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-[#0F172A]">
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              مهارات متطابقة
+              {t('jobs.details.matchedSkills')}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {Array.from(new Set(job.matched_skills)).slice(0, 12).map((skill, index) => (
@@ -513,7 +543,7 @@ function JobDetailsPanel({
           <div>
             <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-[#0F172A]">
               <Target className="h-3.5 w-3.5 text-amber-600" />
-              مهارات ينقصك إبرازها
+              {t('jobs.details.skillsToHighlight')}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {Array.from(new Set(job.missing_skills)).slice(0, 8).map((skill, index) => (
@@ -527,16 +557,16 @@ function JobDetailsPanel({
 
         {job.description && (
           <div>
-            <p className="mb-2 text-xs font-bold text-[#0F172A]">وصف الوظيفة</p>
+            <p className="mb-2 text-xs font-bold text-[#0F172A]">{t('jobs.details.description')}</p>
             <p className="text-xs leading-6 text-[#475569]">{truncateText(job.description, 320)}</p>
-            <Link to={`/jobs/${job.id}`} className="mt-2 inline-block text-xs font-semibold text-[#0EA5A4] hover:text-[#0F766E]">
-              قراءة الوصف الكامل ←
+            <Link to={`/jobs/${job.id}`} className="mt-2 inline-block text-xs font-semibold text-[#0F5C5C] hover:text-[#0C4A4A]">
+              {t('jobs.details.readFull')}
             </Link>
           </div>
         )}
       </div>
 
-      <div className="space-y-2 border-t border-[#F1F5F9] bg-[#F8FAFC] p-4">
+      <div className="space-y-2 border-t border-[#F1F5F9] bg-[var(--rushd-surface-alt)] p-4">
         <div className="grid grid-cols-2 gap-2">
           {job.apply_url ? (
             <a
@@ -544,48 +574,36 @@ function JobDetailsPanel({
               target="_blank"
               rel="noopener noreferrer"
               onClick={onApply}
-              className="col-span-2 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#0EA5A4] px-3 py-2.5 text-xs font-bold text-white transition hover:bg-[#0F766E]"
+              className="rushd-btn rushd-btn--primary rushd-btn--md col-span-2"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              التقديم على الوظيفة
+              {t('jobs.details.applyOnJob')}
             </a>
           ) : (
-            <Link
-              to={`/jobs/${job.id}`}
-              className="col-span-2 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#0EA5A4] px-3 py-2.5 text-xs font-bold text-white transition hover:bg-[#0F766E]"
-            >
+            <Link to={`/jobs/${job.id}`} className="rushd-btn rushd-btn--primary rushd-btn--md col-span-2">
               <ExternalLink className="h-3.5 w-3.5" />
-              عرض الوظيفة
+              {t('jobs.details.viewJob')}
             </Link>
           )}
-          <Link
-            to="/resume"
-            className="inline-flex items-center justify-center gap-1 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-[11px] font-semibold text-[#475569] transition hover:border-[#0EA5A4] hover:text-[#0EA5A4]"
-          >
+          <Link to="/resume" className="rushd-btn rushd-btn--secondary rushd-btn--sm">
             <FileText className="h-3 w-3" />
-            تخصيص السيرة
+            {t('jobs.details.tailorResume')}
           </Link>
-          <Link
-            to="/copilot"
-            className="inline-flex items-center justify-center gap-1 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-[11px] font-semibold text-[#475569] transition hover:border-[#0EA5A4] hover:text-[#0EA5A4]"
-          >
+          <Link to={`/jobs/${job.id}#cover-letter`} className="rushd-btn rushd-btn--secondary rushd-btn--sm">
             <Zap className="h-3 w-3" />
-            خطاب تغطية
+            {t('jobs.details.coverLetter')}
           </Link>
         </div>
-        <button
-          onClick={onSave}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-[11px] font-semibold text-[#475569] transition hover:border-[#0EA5A4] hover:text-[#0EA5A4]"
-        >
-          <Bookmark className="h-3 w-3" />
-          حفظ في القائمة
-        </button>
+        <Button onClick={onSave} variant="secondary" size="sm" icon={<Bookmark className="h-3 w-3" />} className="w-full">
+          {t('jobs.details.saveToList')}
+        </Button>
       </div>
     </Card>
   )
 }
 
 export default function JobsPage() {
+  const { t, dir } = useTranslation()
   const [searchInput, setSearchInput] = useState('')
   const [activeTab, setActiveTab] = useState<TabKey>('recommended')
   const [externalJobs, setExternalJobs] = useState<RecommendedJob[]>([])
@@ -673,7 +691,7 @@ export default function JobsPage() {
     } catch (err) {
       setExternalJobs([])
       setSelectedJobId(null)
-      setSearchError(err instanceof Error ? err.message : 'حدث خطأ أثناء البحث')
+      setSearchError(err instanceof Error ? err.message : t('jobs.error.searchFailed'))
     } finally {
       setSearchLoading(false)
     }
@@ -693,8 +711,11 @@ export default function JobsPage() {
     const parts = searchInput.split('•').map((part) => part.trim()).filter(Boolean)
     const q = parts[0] || searchInput.trim()
     const location = parts[1]
+    // Recognize both Arabic and English remote/work-type markers regardless
+    // of the current UI language, since a query typed earlier (or pasted)
+    // may still contain the other language's wording.
     const remote = parts.some((part) => part.includes('عن بُعد') || /remote/i.test(part))
-    const employmentType = parts.find((part) => /دوام/.test(part))
+    const employmentType = parts.find((part) => /دوام/.test(part) || /full[\s-]?time|part[\s-]?time|contract/i.test(part))
 
     await runSearch(
       {
@@ -717,11 +738,11 @@ export default function JobsPage() {
   }
 
   const handleOpenAgent = async (agent: SearchAgent) => {
-    setSearchInput(buildSearchInputFromAgent(agent))
+    setSearchInput(buildSearchInputFromAgent(agent, t('jobs.remote')))
     setSearchLoading(true)
     setSearchError('')
     setActiveTab('all')
-    setLastSearchLabel(`وكيل: ${agent.name}`)
+    setLastSearchLabel(t('jobs.agentPrefix', { name: agent.name }))
     setHidden(new Set())
     try {
       const res = await runAgent.mutateAsync(agent.id)
@@ -731,7 +752,7 @@ export default function JobsPage() {
     } catch (err) {
       setExternalJobs([])
       setSelectedJobId(null)
-      setSearchError(err instanceof Error ? err.message : 'فشل تشغيل الوكيل')
+      setSearchError(err instanceof Error ? err.message : t('jobs.error.agentRunFailed'))
     } finally {
       setSearchLoading(false)
       document.getElementById('job-list-section')?.scrollIntoView({ behavior: 'smooth' })
@@ -753,7 +774,7 @@ export default function JobsPage() {
   const activeAgentsCount = agents.filter((agent) => agent.active).length
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <HeroSection
         onCreateAgent={() => setModalOpen(true)}
         onBrowse={() => document.getElementById('job-list-section')?.scrollIntoView({ behavior: 'smooth' })}
@@ -773,33 +794,33 @@ export default function JobsPage() {
 
       {agentsQuery.isError && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          تعذر تحميل وكلاء البحث. تأكد من تشغيل الخادم الخلفي وتحديث قاعدة البيانات.
+          {t('jobs.error.loadAgentsFailed')}
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
           icon={Zap}
-          label="وظائف جديدة اليوم"
+          label={t('jobs.stats.newToday')}
           value={newToday || recommendedJobs.length || 0}
-          trend={activeAgentsCount > 0 ? `${activeAgentsCount} وكيل نشط` : undefined}
+          trend={activeAgentsCount > 0 ? t('jobs.stats.activeAgents', { count: activeAgentsCount }) : undefined}
           tone="teal"
         />
         <StatCard
           icon={TrendingUp}
-          label="فرص عالية التطابق"
+          label={t('jobs.stats.highMatch')}
           value={recommendedJobs.filter((job) => (job.match_score ?? 0) >= 70).length}
           tone="emerald"
         />
         <StatCard
           icon={CheckCircle2}
-          label="تم التقديم"
+          label={t('jobs.stats.applied')}
           value={stats.data?.data?.applications_count ?? 0}
           tone="violet"
         />
         <StatCard
           icon={Building2}
-          label="وكلاء محفوظون"
+          label={t('jobs.stats.savedAgents')}
           value={agents.length}
           tone="amber"
         />
@@ -809,33 +830,29 @@ export default function JobsPage() {
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-bold text-[#0F172A]">
-              وكلاء البحث
+              {t('jobs.agents.title')}
             </h2>
             <p className="mt-0.5 text-xs text-[#64748B]">
-              وكلاء متعددة تحفظ تفضيلاتك وتبني خطط بحث قابلة للتشغيل عبر عدة مصادر.
+              {t('jobs.agents.subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-2">
             {profileSummary.data?.data?.ready && (
-              <span className="rounded-full bg-teal-50 px-3 py-1 text-[11px] font-medium text-[#0F766E] ring-1 ring-teal-100">
-                الملف المهني جاهز
+              <span className="rounded-full bg-[#E3EFEE] px-3 py-1 text-[11px] font-medium text-[#0F5C5C] ring-1 ring-[#0F5C5C]/15">
+                {t('jobs.agents.profileReady')}
               </span>
             )}
-            <button
-              onClick={() => setModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-xs font-semibold text-[#0F766E] transition hover:border-[#0EA5A4] hover:bg-teal-50"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              وكيل جديد
-            </button>
+            <Button onClick={() => setModalOpen(true)} variant="secondary" size="sm" icon={<Plus className="h-3.5 w-3.5" />}>
+              {t('jobs.agents.new')}
+            </Button>
           </div>
         </div>
 
         {agentsQuery.isLoading ? (
           <Card className="flex min-h-[170px] items-center justify-center border border-dashed border-[#CBD5E1]">
             <div className="text-center">
-              <Spinner size="lg" className="text-[#0EA5A4]" />
-              <p className="mt-3 text-sm text-[#64748B]">جاري تحميل الوكلاء...</p>
+              <Spinner size="lg" className="text-[#0F5C5C]" />
+              <p className="mt-3 text-sm text-[#64748B]">{t('jobs.agents.loading')}</p>
             </div>
           </Card>
         ) : (
@@ -888,16 +905,16 @@ export default function JobsPage() {
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition',
                 active
-                  ? 'bg-[#0EA5A4] text-white shadow-sm'
-                  : 'text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]',
+                  ? 'bg-[#0F5C5C] text-white shadow-sm'
+                  : 'text-[#64748B] hover:bg-[var(--rushd-surface-alt)] hover:text-[#0F172A]',
               )}
             >
               <Icon className="h-3.5 w-3.5" />
-              {tab.label}
+              {t(tab.labelKey)}
               <span
                 className={cn(
                   'rounded-full px-1.5 py-0.5 text-[9px]',
-                  active ? 'bg-white/20 text-white' : 'bg-[#F1F5F9] text-[#64748B]',
+                  active ? 'bg-white/20 text-white' : 'bg-[var(--rushd-surface-alt)] text-[var(--rushd-ink-soft)]',
                 )}
               >
                 {tabCounts[tab.key]}
@@ -905,10 +922,8 @@ export default function JobsPage() {
             </button>
           )
         })}
-        <div className="ml-auto flex items-center gap-1">
-          <button className="rounded-xl border border-[#E2E8F0] bg-white p-2 text-[#64748B] transition hover:border-[#0EA5A4] hover:text-[#0EA5A4]">
-            <Settings className="h-3.5 w-3.5" />
-          </button>
+        <div className="ms-auto flex items-center gap-1">
+          <Button variant="secondary" size="sm" icon={<Settings className="h-3.5 w-3.5" />} aria-label={t('jobs.settings')} />
         </div>
       </div>
 
@@ -916,25 +931,21 @@ export default function JobsPage() {
         <div className="space-y-3">
           {lastSearchLabel && activeTab === 'all' && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-teal-200 bg-teal-50/60 px-4 py-3">
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#0F5C5C]/20 bg-[#E3EFEE]/60 px-4 py-3">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#0F766E]">نتائج البحث</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#0F5C5C]">{t('jobs.searchResults')}</p>
                   <p className="mt-0.5 truncate text-sm font-bold text-[#0F172A]">
                     {lastSearchLabel}
                     {!searchLoading && (
-                      <span className="mr-2 text-xs font-medium text-[#64748B]">
-                        ({visibleJobs.length} نتيجة)
+                      <span className="mx-2 text-xs font-medium text-[#64748B]">
+                        {t('jobs.resultsCount', { count: visibleJobs.length })}
                       </span>
                     )}
                   </p>
                 </div>
-                <button
-                  onClick={clearSearch}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-[#E2E8F0] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#475569] transition hover:border-[#0EA5A4] hover:text-[#0EA5A4]"
-                >
-                  <X className="h-3 w-3" />
-                  مسح البحث
-                </button>
+                <Button onClick={clearSearch} variant="secondary" size="sm" icon={<X className="h-3 w-3" />} className="shrink-0">
+                  {t('jobs.clearSearch')}
+                </Button>
               </div>
 
               {(() => {
@@ -946,7 +957,7 @@ export default function JobsPage() {
                 if (sources.length <= 1) return null
                 return (
                   <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2">
-                    <span className="text-[10px] font-semibold text-[#64748B]">المصادر:</span>
+                    <span className="text-[10px] font-semibold text-[#64748B]">{t('jobs.sources')}</span>
                     {sources.map(([src, count]) => {
                       const active = sourceFilter.size === 0 || sourceFilter.has(src)
                       return (
@@ -972,14 +983,14 @@ export default function JobsPage() {
                           className={cn(
                             'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-semibold transition',
                             active
-                              ? 'bg-[#0EA5A4]/10 text-[#0EA5A4] ring-1 ring-[#0EA5A4]/30'
-                              : 'bg-[#F1F5F9] text-[#94A3B8]',
+                              ? 'bg-[#0F5C5C]/10 text-[#0F5C5C] ring-1 ring-[#0F5C5C]/30'
+                              : 'bg-[var(--rushd-surface-alt)] text-[var(--rushd-ink-soft)]',
                           )}
                         >
                           {SOURCE_LABELS[src] ?? src}
                           <span className={cn(
                             'rounded-full px-1 text-[9px]',
-                            active ? 'bg-[#0EA5A4]/20' : 'bg-[#E2E8F0]',
+                            active ? 'bg-[#0F5C5C]/20' : 'bg-[#E2E8F0]',
                           )}>
                             {count}
                           </span>
@@ -989,9 +1000,9 @@ export default function JobsPage() {
                     {sourceFilter.size > 0 && (
                       <button
                         onClick={() => setSourceFilter(new Set())}
-                        className="mr-1 text-[10px] font-medium text-[#64748B] underline hover:text-[#0EA5A4]"
+                        className="mx-1 text-[10px] font-medium text-[#64748B] underline hover:text-[#0F5C5C]"
                       >
-                        الكل
+                        {t('jobs.sourcesAll')}
                       </button>
                     )}
                   </div>
@@ -1002,40 +1013,32 @@ export default function JobsPage() {
 
           {searchLoading ? (
             <Card className="flex min-h-[300px] flex-col items-center justify-center border border-dashed border-[#CBD5E1]">
-              <Spinner size="lg" className="text-[#0EA5A4]" />
-              <p className="mt-3 text-sm text-[#64748B]">جاري البحث في المصادر الخارجية...</p>
+              <Spinner size="lg" className="text-[#0F5C5C]" />
+              <p className="mt-3 text-sm text-[#64748B]">{t('jobs.searchingExternal')}</p>
             </Card>
           ) : recommended.isLoading && !lastSearchLabel ? (
             <Card className="flex min-h-[300px] flex-col items-center justify-center border border-dashed border-[#CBD5E1]">
-              <Spinner size="lg" className="text-[#0EA5A4]" />
-              <p className="mt-3 text-sm text-[#64748B]">جاري تحميل التوصيات...</p>
+              <Spinner size="lg" className="text-[#0F5C5C]" />
+              <p className="mt-3 text-sm text-[#64748B]">{t('jobs.loadingRecommendations')}</p>
             </Card>
           ) : visibleJobs.length === 0 ? (
             <Card className="flex min-h-[300px] flex-col items-center justify-center border border-dashed border-[#CBD5E1] text-center">
               <Search className="h-10 w-10 text-[#CBD5E1]" />
               {lastSearchLabel ? (
                 <>
-                  <p className="mt-3 text-sm font-medium text-[#0F172A]">لم نجد نتائج لـ "{lastSearchLabel}"</p>
-                  <p className="mt-1 text-xs text-[#64748B]">جرّب كلمات أوسع أو غيّر الموقع.</p>
-                  <button
-                    onClick={clearSearch}
-                    className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-[#E2E8F0] bg-white px-4 py-2 text-xs font-semibold text-[#475569] transition hover:border-[#0EA5A4] hover:text-[#0EA5A4]"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                    مسح البحث والعودة للتوصيات
-                  </button>
+                  <p className="mt-3 text-sm font-medium text-[#0F172A]">{t('jobs.noResultsFor', { query: lastSearchLabel })}</p>
+                  <p className="mt-1 text-xs text-[#64748B]">{t('jobs.noResultsHint')}</p>
+                  <Button onClick={clearSearch} variant="secondary" size="sm" icon={<X className="h-3.5 w-3.5" />} className="mt-4">
+                    {t('jobs.clearAndReturn')}
+                  </Button>
                 </>
               ) : (
                 <>
-                  <p className="mt-3 text-sm font-medium text-[#0F172A]">لا توجد وظائف لعرضها بعد</p>
-                  <p className="mt-1 text-xs text-[#64748B]">أنشئ وكيل بحث أو نفذ بحثًا يدويًا للبدء.</p>
-                  <button
-                    onClick={() => setModalOpen(true)}
-                    className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#0EA5A4] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#0F766E]"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    إنشاء وكيل بحث
-                  </button>
+                  <p className="mt-3 text-sm font-medium text-[#0F172A]">{t('jobs.noJobsYet')}</p>
+                  <p className="mt-1 text-xs text-[#64748B]">{t('jobs.noJobsHint')}</p>
+                  <Button onClick={() => setModalOpen(true)} size="sm" icon={<Plus className="h-3.5 w-3.5" />} className="mt-4">
+                    {t('jobs.hero.createAgent')}
+                  </Button>
                 </>
               )}
             </Card>

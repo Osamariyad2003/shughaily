@@ -12,58 +12,86 @@
 [![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=flat-square&logo=redis)](https://redis.io)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker)](https://docs.docker.com/compose)
 
-A full-stack SaaS that helps Arabic-speaking job seekers upload CVs, get AI-matched job recommendations, receive cover letter generation, ATS scoring, interview prep, and an intelligent copilot — all in RTL-first Arabic.
+A full-stack SaaS that helps Arabic-speaking job seekers upload CVs, get AI-matched job recommendations, receive cover letter generation, ATS scoring, interview prep, and an intelligent copilot — all in a fully bilingual (Arabic RTL / English LTR) interface.
 
 </div>
 
 ---
 
-## Screenshots
+## About
+
+Al-Shughaily is a personal full-stack project built to explore what an end-to-end AI product looks like when every layer — parsing, embeddings, LLM orchestration, background job scheduling, and a genuinely bilingual UI — has to work together in production, not just in a notebook. It's the project I point to when talking about system design across a browser, an API, a task queue, and an AI service that all have to agree with each other.
+
+## Demo / Screenshots
 
 <table>
   <tr>
     <td align="center" width="50%">
-      <b>Login / Landing — تسجيل الدخول</b><br/>
-      <img src="docs/screenshots/01-login.png" alt="Login page" width="100%"/>
+      <b>Login — تسجيل الدخول</b><br/>
+      <img src="screenshots/01-login.png" alt="Login screen" width="100%"/>
     </td>
     <td align="center" width="50%">
-      <b>Dashboard — لوحة التحكم</b><br/>
-      <img src="docs/screenshots/02-dashboard.png" alt="Dashboard" width="100%"/>
+      <b>Validation error state</b><br/>
+      <img src="screenshots/02-login-error-state.png" alt="Login form showing an invalid-credentials error" width="100%"/>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
+      <b>Dashboard — لوحة التحكم</b><br/>
+      <img src="screenshots/03-dashboard.png" alt="Dashboard with stats, recommendations, and recent activity" width="100%"/>
+    </td>
+    <td align="center" width="50%">
       <b>Job Search & Agents — الوظائف</b><br/>
-      <img src="docs/screenshots/04-jobs.png" alt="Jobs page with search agents" width="100%"/>
+      <img src="screenshots/04-jobs-search-agents.png" alt="Jobs page with search agents and recommended feed" width="100%"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <b>Job Detail — AI match + ATS review</b><br/>
+      <img src="screenshots/05-job-detail.png" alt="Job detail page with match score and ATS compatibility review" width="100%"/>
     </td>
     <td align="center" width="50%">
       <b>Resume Manager — سيرتي الذاتية</b><br/>
-      <img src="docs/screenshots/03-CV.png" alt="Resume manager with uploaded CV" width="100%"/>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <b>ATS Checker — فحص توافق ATS</b><br/>
-      <img src="docs/screenshots/04-Ats.png" alt="ATS compatibility checker" width="100%"/>
-    </td>
-    <td align="center" width="50%">
-      <b>Cover Letter Generator — رسالة التقدم</b><br/>
-      <img src="docs/screenshots/08-coverletter.png" alt="Cover letter generator" width="100%"/>
+      <img src="screenshots/06-resume-manager.png" alt="Resume manager with an uploaded and parsed CV" width="100%"/>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
       <b>Application Tracker — متابعة الطلبات</b><br/>
-      <img src="docs/screenshots/05-applications.png" alt="Application tracker" width="100%"/>
+      <img src="screenshots/07-applications-tracker.png" alt="Kanban-style application tracker" width="100%"/>
+    </td>
+    <td align="center" width="50%">
+      <b>Saved Jobs — المحفوظات</b><br/>
+      <img src="screenshots/08-saved-jobs.png" alt="Saved jobs list" width="100%"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <b>Copilot Chat — المساعد</b><br/>
+      <img src="screenshots/09-copilot-chat.png" alt="Conversational AI copilot" width="100%"/>
+    </td>
+    <td align="center" width="50%">
+      <b>Billing & Usage — الفوترة</b><br/>
+      <img src="screenshots/10-billing.png" alt="Billing page with API keys and token usage" width="100%"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <b>Settings — language toggle</b><br/>
+      <img src="screenshots/11-settings.png" alt="Settings page with the Arabic/English language toggle" width="100%"/>
     </td>
     <td align="center"></td>
   </tr>
 </table>
 
+> Screenshots are captured automatically with a headless Playwright script — see [`frontend/scripts/capture-screenshots.mjs`](frontend/scripts/capture-screenshots.mjs).
+
 ---
 
 ## Table of Contents
 
+- [About](#about)
+- [Demo / Screenshots](#demo--screenshots)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
@@ -91,7 +119,9 @@ A full-stack SaaS that helps Arabic-speaking job seekers upload CVs, get AI-matc
 | **Interview Prep** | Role-specific questions + model answers |
 | **Copilot Chat** | Conversational assistant with intent routing |
 | **Application Tracker** | Kanban-style pipeline for all applications |
-| **RTL-first UI** | Full Arabic interface with Tailwind + framer-motion |
+| **Search Agents** | Saved, recurring job searches that run automatically across sources |
+| **Bilingual UI (AR/EN)** | Full Arabic (RTL) and English (LTR) interface, switchable live with no reload |
+| **API Keys & Usage Billing** | Per-user API keys with token-usage tracking and quotas |
 
 ---
 
@@ -99,7 +129,7 @@ A full-stack SaaS that helps Arabic-speaking job seekers upload CVs, get AI-matc
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                     Browser (RTL)                       │
+│                Browser (AR/RTL ↔ EN/LTR)                │
 │              React 19 + Vite + Tailwind 4               │
 └───────────────────────┬─────────────────────────────────┘
                         │ HTTP / REST
@@ -128,8 +158,9 @@ shughaily/
 │   │   ├── components/        # Shared UI components
 │   │   ├── pages/             # Route-level pages
 │   │   ├── services/          # API client layer
-│   │   ├── stores/            # Zustand state
-│   │   └── lib/               # Types, utils, cn helper
+│   │   ├── store/          # Zustand state (auth, i18n, UI)
+│   │   └── lib/            # Types, utils, cn helper, i18n locales
+│   ├── scripts/            # capture-screenshots.mjs (Playwright)
 │   └── vite.config.ts
 │
 ├── backend/                   # Express + TypeScript
@@ -138,7 +169,7 @@ shughaily/
 │       ├── routes/            # Express routers
 │       ├── services/          # Business logic & AI bridge
 │       ├── jobs/              # BullMQ workers
-│       ├── middlewares/       # Auth, error handling
+│       ├── middlewares/       # Auth, rate limiting, error handling
 │       └── config/            # Env + DB config
 │
 ├── ai-service/                # Flask AI orchestrator
@@ -149,9 +180,11 @@ shughaily/
 │   └── run.py
 │
 ├── database/
+│   ├── migrations/            # Incremental schema migrations
 │   ├── schema.sql             # Full PostgreSQL schema
 │   └── seed.sql               # Dev seed data
 │
+├── screenshots/                # Portfolio screenshots (see Demo section)
 ├── shared/                    # Shared Zod schemas / types
 └── docker-compose.yml
 ```
@@ -259,8 +292,16 @@ JWT_EXPIRES_IN=7d
 CORS_ORIGIN=http://localhost:3000,http://localhost:5173
 FLASK_AI_URL=http://localhost:5050
 
+# Shared secret the backend sends on every call to the AI service — both
+# services require this to be set (fail fast if missing) and it must be
+# byte-identical in both .env files. Generate with `openssl rand -hex 32`.
+INTERNAL_AUTH_TOKEN=change-me-generate-a-random-64-char-hex-secret
+
 # ── Flask AI Service ──────────────────────────────────────
 FLASK_PORT=5050
+# Never "true" outside a machine nothing else can reach — the interactive
+# Werkzeug debugger this enables is remote code execution.
+FLASK_DEBUG=false
 HF_MODEL_NAME=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 EXPRESS_URL=http://localhost:4000
 
@@ -371,6 +412,8 @@ The Flask service runs 10 specialized pipelines triggered by the Express backend
 | **Queue** | Redis 7 + BullMQ |
 | **Storage** | AWS S3 / Cloudflare R2 |
 | **Auth** | JWT + Google OAuth 2.0 |
+| **Security** | Internal service-to-service auth, rate limiting, SSRF-guarded file downloads, network-isolated AI service |
+| **Testing / Tooling** | Playwright (E2E + screenshot automation) |
 | **Containers** | Docker Compose |
 
 ---
@@ -382,7 +425,7 @@ The Flask service runs 10 specialized pipelines triggered by the Express backend
 | **Primary** | `#0EA5A4` (teal) |
 | **Gradient** | `#0EA5A4 → #06B6D4` |
 | **Font (Arabic)** | IBM Plex Sans Arabic / Noto Sans Arabic |
-| **Direction** | RTL-first |
+| **Direction** | RTL (Arabic) / LTR (English) — switchable live via Settings |
 | **Tone** | Practical, honest, supportive — never flatters, never fabricates |
 
 ---

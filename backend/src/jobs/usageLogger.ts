@@ -1,5 +1,6 @@
 import { Queue, Worker, Job as BullJob } from 'bullmq';
 import { config } from '../config';
+import { parseRedisConnection } from '../config/redisConnection';
 import { withTransaction } from '../config/database';
 
 export interface UsageLogPayload {
@@ -8,25 +9,6 @@ export interface UsageLogPayload {
   endpoint: string;
   tokensUsed: number;
   estimatedCost: number;
-}
-
-function parseRedisConnection(url: string) {
-  try {
-    const parsed = new URL(url);
-    return {
-      host: parsed.hostname || 'localhost',
-      port: parseInt(parsed.port || '6379', 10),
-      ...(parsed.password ? { password: decodeURIComponent(parsed.password) } : {}),
-      ...(parsed.username && parsed.username !== 'default' ? { username: parsed.username } : {}),
-      ...(parsed.protocol === 'rediss:' ? { tls: {} } : {}),
-      // Bound retries so a dead Redis server doesn't spam the log
-      maxRetriesPerRequest: null,
-      enableReadyCheck: false,
-      retryStrategy: (times: number) => (times >= 5 ? null : Math.min(times * 500, 3_000)),
-    };
-  } catch {
-    return { host: 'localhost', port: 6379 };
-  }
 }
 
 const connection = parseRedisConnection(config.redisUrl);

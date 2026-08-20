@@ -64,8 +64,50 @@ export interface Job {
   employment_type?: string
   apply_url?: string
   employer_logo?: string
+  /** Contact email parsed from the posting, if any. Only email-apply jobs are eligible for auto-apply. */
+  apply_email?: string
   created_at: string
+  /** Fields populated when a job is shown in a recommendation/save context. */
+  match_score?: number
+  is_saved?: boolean
+  posted_at?: string
+  /** Set on search-agent run results — robust remote detection (structural
+   * marker or a remote signal in location/title/description), used to
+   * label remote postings. Not present on plain job-search results. */
+  is_remote?: boolean
+  /** Set on search-agent run results. 'unknown' means posted_at couldn't
+   * be determined (kept in results per the recency filter's missing-date
+   * policy, never dropped) — lets the UI de-emphasize/sort these behind
+   * dated-recent results if it wants to. */
+  date_confidence?: 'known' | 'unknown'
 }
+
+/**
+ * Rushd design system — job pipeline status used by <StatusBadge />.
+ * Distinct from `Application['status']`, which tracks the backend's finer
+ * six-stage pipeline; use `mapApplicationStatus` (lib/utils) to convert.
+ */
+export type Status = 'new' | 'applied' | 'interview' | 'offer' | 'rejected'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Email auto-apply
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AutoApplySettings {
+  id: string
+  user_id: string
+  enabled: boolean
+  min_match_threshold: number
+  daily_send_cap: number
+  dry_run: boolean
+  reviewed_first_send: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type AutoApplySettingsInput = Partial<
+  Pick<AutoApplySettings, 'enabled' | 'min_match_threshold' | 'daily_send_cap' | 'dry_run' | 'reviewed_first_send'>
+>
 
 export interface Match {
   id?: string
@@ -110,12 +152,6 @@ export type SearchAgentWorkMode = 'onsite' | 'hybrid' | 'remote'
 
 export type SearchAgentCompanySize = 'startup' | 'small' | 'mid_market' | 'enterprise'
 
-export interface SearchAgentSalaryExpectation {
-  amount?: number | null
-  currency?: string | null
-  period: 'monthly' | 'yearly'
-}
-
 export interface SearchAgentInput {
   name: string
   target_titles: string[]
@@ -124,7 +160,8 @@ export interface SearchAgentInput {
   work_modes: SearchAgentWorkMode[]
   industries: string[]
   company_sizes: SearchAgentCompanySize[]
-  salary_expectation?: SearchAgentSalaryExpectation | null
+  /** Drop results older than this many days. Default 30. */
+  max_age_days: number
   include_keywords: string[]
   exclude_keywords: string[]
   blacklist_companies: string[]
@@ -135,7 +172,6 @@ export interface SearchAgentInput {
 export interface SearchAgent extends SearchAgentInput {
   id: string
   user_id: string
-  salary_expectation: SearchAgentSalaryExpectation
   active: boolean
   last_run_at?: string | null
   new_jobs_count: number
@@ -157,33 +193,6 @@ export interface CandidateProfileSummary {
   preferred_locations: string[]
   experience_count: number
   updated_at?: string | null
-}
-
-export interface SearchAgentQueryPlanSource {
-  source: string
-  search_text: string
-  filters: {
-    titles: string[]
-    locations: string[]
-    work_modes: SearchAgentWorkMode[]
-    seniority: SearchAgentSeniority[]
-    industries: string[]
-    company_sizes: SearchAgentCompanySize[]
-    salary_expectation: SearchAgentSalaryExpectation
-  }
-  strategy: string
-  crawl_hints: string[]
-}
-
-export interface SearchAgentQueryPlan {
-  agent_id: string
-  generated_at: string
-  canonical_query: string
-  hard_filters: {
-    exclude_keywords: string[]
-    blacklist_companies: string[]
-  }
-  sources: SearchAgentQueryPlanSource[]
 }
 
 export interface Application {
@@ -230,7 +239,19 @@ export interface CvFeedbackResponse {
 
 export interface CoverLetterResponse {
   cover_letter: string
+  full_cover_letter: string
+  short_cover_letter: string
+  word_count_full: number
+  word_count_short: number
+  jd_analysis: {
+    title: string
+    company: string
+    required_skills: string[]
+    responsibilities: string[]
+    mission_values: string[]
+  }
   language: string
+  llm_polished: boolean
 }
 
 export interface InterviewQuestion {

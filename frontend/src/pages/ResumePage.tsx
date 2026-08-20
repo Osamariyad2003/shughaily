@@ -8,10 +8,12 @@ import Badge from '@/components/ui/Badge'
 import Spinner from '@/components/ui/Spinner'
 import { useDeleteResume, useParseResume, useResumes, useUploadResume, useUpdateSkills } from '@/hooks/useResume'
 import { copilotService } from '@/services/copilot.service'
+import { useTranslation } from '@/store/i18nStore'
 import type { AtsCheckResponse, CvFeedback } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
 
 export default function ResumePage() {
+  const { t, dir } = useTranslation()
   const resumesQuery = useResumes()
   const uploadResume = useUploadResume()
   const parseResume = useParseResume()
@@ -64,7 +66,7 @@ export default function ResumePage() {
       const response = await copilotService.atsCheck(selectedResume.id)
       setAtsResult(response.data ?? null)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'فشل فحص ATS. تأكد من تشغيل خدمة AI.'
+      const msg = err instanceof Error ? err.message : t('resume.error.atsFailed')
       setAtsError(msg)
       setAtsResult(null)
     } finally {
@@ -81,18 +83,18 @@ export default function ResumePage() {
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-3xl font-bold text-[#0F172A]">إدارة السيرة الذاتية</h1>
+        <h1 className="text-3xl font-bold text-[#0F172A]">{t('resume.title')}</h1>
         <p className="mt-2 text-sm text-[#64748B]">
-          ارفع سيرتك، حللها، ثم راجع أهم فرص التحسين.
+          {t('resume.subtitle')}
         </p>
       </div>
 
       <Card className="space-y-4 border border-[#E2E8F0]">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           <div className="flex-1">
-            <label className="mb-1.5 block text-sm font-medium text-[#0F172A]">رفع ملف جديد</label>
+            <label className="mb-1.5 block text-sm font-medium text-[#0F172A]">{t('resume.upload.label')}</label>
             <input
               className="block w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#0F172A]"
               type="file"
@@ -102,7 +104,7 @@ export default function ResumePage() {
           </div>
           <Button onClick={handleUpload} loading={uploadResume.isPending} disabled={!selectedFile}>
             <FileUp className="h-4 w-4" />
-            رفع السيرة
+            {t('resume.upload.button')}
           </Button>
         </div>
       </Card>
@@ -110,8 +112,8 @@ export default function ResumePage() {
       <div className="grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
         <Card className="border border-[#E2E8F0]">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-[#0F172A]">السير الذاتية المرفوعة</h2>
-            <span className="text-sm text-[#64748B]">{resumes.length} ملف</span>
+            <h2 className="text-lg font-semibold text-[#0F172A]">{t('resume.list.title')}</h2>
+            <span className="text-sm text-[#64748B]">{resumes.length} {t('resume.list.count')}</span>
           </div>
 
           <div className="space-y-3">
@@ -132,11 +134,11 @@ export default function ResumePage() {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h3 className="font-medium text-[#0F172A]">{resume.file_name ?? 'سيرة ذاتية'}</h3>
+                    <h3 className="font-medium text-[#0F172A]">{resume.file_name ?? t('resume.defaultName')}</h3>
                     <p className="mt-1 text-xs text-[#64748B]">{formatDate(resume.created_at)}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {resume.parsed_data && <Badge variant="success">تم التحليل</Badge>}
+                    {resume.parsed_data && <Badge variant="success">{t('resume.parsed')}</Badge>}
                     <button
                       className="rounded-lg p-2 text-[#EF4444] hover:bg-red-50"
                       onClick={(event) => {
@@ -153,14 +155,14 @@ export default function ResumePage() {
             ))}
 
             {resumes.length === 0 && (
-              <p className="text-sm text-[#64748B]">لا توجد سيرة ذاتية مرفوعة حتى الآن.</p>
+              <p className="text-sm text-[#64748B]">{t('resume.list.empty')}</p>
             )}
           </div>
         </Card>
 
         <Card className="space-y-4 border border-[#E2E8F0]">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-[#0F172A]">تحليل وملاحظات</h2>
+            <h2 className="text-lg font-semibold text-[#0F172A]">{t('resume.analysis.title')}</h2>
           </div>
 
           {selectedResume ? (
@@ -171,10 +173,10 @@ export default function ResumePage() {
                   onClick={() => parseResume.mutate(selectedResume.id)}
                   loading={parseResume.isPending}
                 >
-                  تحليل السيرة
+                  {t('resume.analysis.parse')}
                 </Button>
                 <Button onClick={handleFeedback} loading={feedbackLoading}>
-                  ملاحظات السيرة
+                  {t('resume.analysis.feedback')}
                 </Button>
                 <Button
                   variant="secondary"
@@ -182,7 +184,7 @@ export default function ResumePage() {
                   loading={atsLoading}
                 >
                   <Shield className="h-4 w-4" />
-                  فحص توافق ATS
+                  {t('resume.analysis.atsCheck')}
                 </Button>
               </div>
 
@@ -193,8 +195,8 @@ export default function ResumePage() {
               )}
 
               {selectedResume.parsed_data?.summary && (
-                <div className="rounded-2xl bg-[#F8FAFC] p-4">
-                  <p className="text-xs font-semibold text-[#0F172A]">الملخص</p>
+                <div className="rounded-2xl bg-[var(--rushd-surface-alt)] p-4">
+                  <p className="text-xs font-semibold text-[#0F172A]">{t('resume.summary')}</p>
                   <p className="mt-2 text-sm leading-6 text-[#475569]">
                     {selectedResume.parsed_data.summary}
                   </p>
@@ -216,9 +218,9 @@ export default function ResumePage() {
                 return (
                   <div className="rounded-2xl border border-[#E2E8F0] bg-white p-4">
                     <div className="mb-3 flex items-center justify-between">
-                      <p className="text-sm font-bold text-[#0F172A]">المهارات</p>
+                      <p className="text-sm font-bold text-[#0F172A]">{t('resume.skills.title')}</p>
                       <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-medium text-[#0F766E] ring-1 ring-teal-200">
-                        {skills.length} مهارة
+                        {skills.length} {t('resume.skills.count')}
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -238,7 +240,7 @@ export default function ResumePage() {
                               type="button"
                               onClick={() => removeSkill(skill)}
                               className="opacity-0 transition group-hover:opacity-100"
-                              title="حذف"
+                              title={t('resume.skills.remove')}
                             >
                               <X className="h-3 w-3" />
                             </button>
@@ -246,7 +248,7 @@ export default function ResumePage() {
                         ))}
                       </AnimatePresence>
                       {skills.length === 0 && (
-                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-[#94A3B8]">لا توجد مهارات. أضف أولى مهاراتك أدناه.</motion.p>
+                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-[#94A3B8]">{t('resume.skills.empty')}</motion.p>
                       )}
                     </div>
                     <div className="mt-3 flex gap-2">
@@ -254,8 +256,8 @@ export default function ResumePage() {
                         value={newSkill}
                         onChange={(e) => setNewSkill(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSkill() } }}
-                        placeholder="أضف مهارة... (React, Python, SQL)"
-                        className="flex-1 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2 text-xs text-[#0F172A] outline-none transition focus:border-[#0EA5A4] focus:ring-2 focus:ring-[#0EA5A4]/20"
+                        placeholder={t('resume.skills.placeholder')}
+                        className="flex-1 rounded-xl border border-[#E2E8F0] bg-[var(--rushd-surface-alt)] px-3 py-2 text-xs text-[#0F172A] outline-none transition focus:border-[#0EA5A4] focus:ring-2 focus:ring-[#0EA5A4]/20"
                       />
                       <button
                         type="button"
@@ -264,7 +266,7 @@ export default function ResumePage() {
                         className="inline-flex items-center gap-1 rounded-xl bg-[#0EA5A4] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#0F766E] disabled:opacity-40"
                       >
                         <Plus className="h-3.5 w-3.5" />
-                        إضافة
+                        {t('resume.skills.add')}
                       </button>
                     </div>
                   </div>
@@ -283,7 +285,7 @@ export default function ResumePage() {
               )}
             </>
           ) : (
-            <p className="text-sm text-[#64748B]">اختر سيرة ذاتية أو ارفع ملفاً جديداً للبدء.</p>
+            <p className="text-sm text-[#64748B]">{t('resume.empty')}</p>
           )}
         </Card>
       </div>
@@ -327,7 +329,7 @@ export default function ResumePage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <Shield className="h-5 w-5" />
-                    <h2 className="text-xl font-bold">تقرير توافق ATS</h2>
+                    <h2 className="text-xl font-bold">{t('resume.ats.title')}</h2>
                   </div>
                   <p className={cn(
                     'mt-2 text-sm font-semibold',
@@ -346,21 +348,21 @@ export default function ResumePage() {
                     <TrendingUp className="h-4 w-4 text-emerald-400" />
                     <p className="text-2xl font-bold text-emerald-400">{atsResult.passed_checks}</p>
                   </div>
-                  <p className="text-[10px] text-white/70">ناجح</p>
+                  <p className="text-[10px] text-white/70">{t('resume.ats.passed')}</p>
                 </div>
                 <div className="rounded-2xl bg-white/10 px-5 py-3 backdrop-blur">
                   <div className="flex items-center justify-center gap-1">
                     <AlertTriangle className="h-4 w-4 text-amber-400" />
                     <p className="text-2xl font-bold text-amber-400">{atsResult.warning_checks}</p>
                   </div>
-                  <p className="text-[10px] text-white/70">تحذير</p>
+                  <p className="text-[10px] text-white/70">{t('resume.ats.warning')}</p>
                 </div>
                 <div className="rounded-2xl bg-white/10 px-5 py-3 backdrop-blur">
                   <div className="flex items-center justify-center gap-1">
                     <TrendingDown className="h-4 w-4 text-red-400" />
                     <p className="text-2xl font-bold text-red-400">{atsResult.failed_checks}</p>
                   </div>
-                  <p className="text-[10px] text-white/70">فشل</p>
+                  <p className="text-[10px] text-white/70">{t('resume.ats.failed')}</p>
                 </div>
               </div>
             </div>
@@ -397,9 +399,9 @@ export default function ResumePage() {
 
           {/* Keywords */}
           {atsResult.matched_keywords.length > 0 && (
-            <div className="border-t border-[#F1F5F9] bg-[#F8FAFC] p-6">
+            <div className="border-t border-[#F1F5F9] bg-[var(--rushd-surface-alt)] p-6">
               <p className="mb-3 flex items-center gap-2 text-sm font-bold text-[#0F172A]">
-                الكلمات المفتاحية المكتشفة
+                {t('resume.ats.keywords')}
               </p>
               <div className="flex flex-wrap gap-2">
                 {atsResult.matched_keywords.map((kw) => (
@@ -417,9 +419,9 @@ export default function ResumePage() {
             <div className="border-t border-[#F1F5F9] bg-gradient-to-br from-teal-50/60 to-slate-50 p-6">
               <p className="mb-3 flex items-center gap-2 text-sm font-bold text-[#0F172A]">
                 <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-[10px] font-black text-white">AI</span>
-                نصائح ذكاء اصطناعي لتحسين التوافق
+                {t('resume.ats.aiTips')}
               </p>
-              <p className="whitespace-pre-line text-sm leading-7 text-[#334155]" dir="rtl">
+              <p className="whitespace-pre-line text-sm leading-7 text-[#334155]" dir={dir}>
                 {atsResult.llm_tips}
               </p>
             </div>

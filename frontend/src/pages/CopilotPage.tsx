@@ -3,10 +3,13 @@ import { AlertTriangle, Copy, MessageSquare, Send } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { COPILOT_QUICK_PROMPTS } from '@/lib/constants'
 import { copilotService } from '@/services/copilot.service'
+import { useTranslation } from '@/store/i18nStore'
+import { quickPromptsByLocale } from '@/lib/locales'
 import type { ChatMessage } from '@/lib/types'
 
+// Matched against the actual API error message (not UI copy) to detect an
+// AI-service outage regardless of which language the UI is displaying.
 const AI_UNAVAILABLE_MSGS = [
   'خدمة الذكاء الاصطناعي غير متاحة',
   'AI service',
@@ -19,10 +22,11 @@ function isAiDownError(msg: string) {
 }
 
 export default function CopilotPage() {
+  const { t, dir, language } = useTranslation()
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
-      content: 'أنا الشغيلي. أقدر أساعدك في السيرة الذاتية، التوصيات، وخطابات التغطية والمقابلات.',
+      content: t('copilot.welcome'),
     },
   ])
   const [input, setInput] = useState('')
@@ -44,20 +48,18 @@ export default function CopilotPage() {
     setAiDown(false)
 
     try {
-      const response = await copilotService.chat(message.trim(), 'ar')
-      const reply = response.data?.reply ?? 'تعذر توليد رد الآن.'
+      const response = await copilotService.chat(message.trim(), language)
+      const reply = response.data?.reply ?? t('copilot.error.noReply')
       setMessages((current) => [...current, { role: 'assistant', content: reply }])
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'حدث خطأ غير متوقع.'
+      const msg = error instanceof Error ? error.message : t('copilot.error.generic')
       const down = isAiDownError(msg)
       if (down) setAiDown(true)
       setMessages((current) => [
         ...current,
         {
           role: 'assistant',
-          content: down
-            ? 'خدمة الذكاء الاصطناعي غير متاحة حالياً. يرجى تشغيل خدمة AI والمحاولة مجدداً.'
-            : msg,
+          content: down ? t('copilot.error.aiDown') : msg,
         },
       ])
     } finally {
@@ -70,19 +72,19 @@ export default function CopilotPage() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[0.85fr,1.4fr]" dir="rtl">
+    <div className="grid gap-6 lg:grid-cols-[0.85fr,1.4fr]" dir={dir}>
       {/* ── Left panel ── */}
       <div className="space-y-4">
         <Card className="border border-[#E2E8F0]">
           <div className="flex items-center gap-2">
             <div>
-              <h1 className="text-base font-bold text-[#0F172A]">بدايات سريعة</h1>
-              <p className="text-[11px] text-[#64748B]">اختر أو اكتب سؤالك</p>
+              <h1 className="text-base font-bold text-[#0F172A]">{t('copilot.quickStart')}</h1>
+              <p className="text-[11px] text-[#64748B]">{t('copilot.quickStart.subtitle')}</p>
             </div>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            {COPILOT_QUICK_PROMPTS.map((prompt) => (
+            {quickPromptsByLocale[language].map((prompt) => (
               <button
                 key={prompt}
                 type="button"
@@ -98,7 +100,7 @@ export default function CopilotPage() {
         {aiDown && (
           <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
             <AlertTriangle className="h-4 w-4 shrink-0" />
-            خدمة المساعد غير متاحة حالياً. تأكد من تشغيل الخادم ثم أعد المحاولة.
+            {t('copilot.aiDownBanner')}
           </div>
         )}
       </div>
@@ -111,8 +113,8 @@ export default function CopilotPage() {
             <MessageSquare className="h-4 w-4" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-[#0F172A]">المساعد</h2>
-            <p className="text-[11px] text-[#64748B]">سيرة ذاتية • توصيات • خطابات تغطية • مقابلات</p>
+            <h2 className="text-sm font-bold text-[#0F172A]">{t('copilot.header.title')}</h2>
+            <p className="text-[11px] text-[#64748B]">{t('copilot.header.subtitle')}</p>
           </div>
         </div>
 
@@ -135,15 +137,15 @@ export default function CopilotPage() {
                 <div className={`group relative max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-7 ${
                   message.role === 'user'
                     ? 'bg-[#0EA5A4] text-white rounded-tl-sm'
-                    : 'bg-[#F8FAFC] text-[#334155] rounded-tr-sm ring-1 ring-[#E2E8F0]'
+                    : 'bg-[var(--rushd-surface-alt)] text-[#334155] rounded-tr-sm ring-1 ring-[#E2E8F0]'
                 }`}>
                   <p className="whitespace-pre-wrap">{message.content}</p>
                   {message.role === 'assistant' && (
                     <button
                       onClick={() => copyText(message.content)}
-                      className="absolute -bottom-6 left-1 hidden items-center gap-1 text-[10px] text-[#94A3B8] hover:text-[#0EA5A4] group-hover:flex"
+                      className="absolute -bottom-6 start-1 hidden items-center gap-1 text-[10px] text-[#94A3B8] hover:text-[#0EA5A4] group-hover:flex"
                     >
-                      <Copy className="h-3 w-3" /> نسخ
+                      <Copy className="h-3 w-3" /> {t('copilot.copy')}
                     </button>
                   )}
                 </div>
@@ -160,7 +162,7 @@ export default function CopilotPage() {
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0EA5A4] text-white">
                 <MessageSquare className="h-3.5 w-3.5" />
               </div>
-              <div className="flex items-center gap-1.5 rounded-2xl bg-[#F8FAFC] px-4 py-3 ring-1 ring-[#E2E8F0]">
+              <div className="flex items-center gap-1.5 rounded-2xl bg-[var(--rushd-surface-alt)] px-4 py-3 ring-1 ring-[#E2E8F0]">
                 <span className="h-2 w-2 animate-bounce rounded-full bg-[#0EA5A4] [animation-delay:0ms]" />
                 <span className="h-2 w-2 animate-bounce rounded-full bg-[#0EA5A4] [animation-delay:150ms]" />
                 <span className="h-2 w-2 animate-bounce rounded-full bg-[#0EA5A4] [animation-delay:300ms]" />
@@ -177,7 +179,7 @@ export default function CopilotPage() {
           onSubmit={(e) => { e.preventDefault(); void sendMessage(input) }}
         >
           <textarea
-            className="min-h-[52px] max-h-32 flex-1 resize-none rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none transition focus:border-[#0EA5A4] focus:ring-2 focus:ring-[#0EA5A4]/20"
+            className="min-h-[52px] max-h-32 flex-1 resize-none rounded-2xl border border-[#E2E8F0] bg-[var(--rushd-surface-alt)] px-4 py-3 text-sm text-[#0F172A] outline-none transition focus:border-[#0EA5A4] focus:ring-2 focus:ring-[#0EA5A4]/20"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -186,12 +188,12 @@ export default function CopilotPage() {
                 void sendMessage(input)
               }
             }}
-            placeholder="اكتب سؤالك هنا... (Enter للإرسال، Shift+Enter للسطر الجديد)"
+            placeholder={t('copilot.input.placeholder')}
             rows={2}
           />
           <Button type="submit" disabled={!input.trim() || loading} loading={loading}>
             <Send className="h-4 w-4" />
-            إرسال
+            {t('copilot.send')}
           </Button>
         </form>
       </Card>

@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import logging
+
 from flask import Blueprint, jsonify, request
 
 from pipelines.resume_parser import ResumeParserPipeline
-from routes.helpers import cleanup_temp_file, download_remote_file, infer_file_type
+from routes.helpers import cleanup_temp_file, download_remote_file, infer_file_type, UnsafeURLError
+from utils.errors import internal_error_response
 
+logger = logging.getLogger(__name__)
 parse_bp = Blueprint("parse", __name__)
 
 
@@ -31,7 +35,13 @@ def parse_resume():
         temp_file_path = download_remote_file(str(file_url), f".{file_type}")
         parsed = pipeline.run(file_path=temp_file_path, file_type=file_type)
         return jsonify(parsed)
+    except UnsafeURLError as exc:
+        # Client-facing message stays generic (no hostname/IP echoed back —
+        # that alone can help an attacker fingerprint the block rule), but
+        # the reason IS logged server-side for debugging legitimate uploads.
+        logger.warning("Blocked file_url for /api/parse-resume: %s", exc)
+        return jsonify({"error": "file_url is not allowed"}), 400
     except Exception as exc:
-        return jsonify({"error": "Failed to parse resume", "detail": str(exc)}), 500
+        return internal_error_response(exc, context="parse_resume")
     finally:
         cleanup_temp_file(temp_file_path)

@@ -39,6 +39,22 @@ export function errorHandler(
     return;
   }
 
+  // Malformed request bodies (invalid JSON, wrong content-type, etc.) are
+  // thrown by express.json()/express.urlencoded() as a SyntaxError with
+  // this specific `type` before any route or validator runs. Without this
+  // check they'd fall into the generic 500 branch below and, in dev mode,
+  // echo the raw body-parser error (byte offset, parser internals) to the
+  // client — a 400 with a fixed message is both the correct status and
+  // the safe one.
+  const bodyParserErr = err as { type?: string; status?: number };
+  if (bodyParserErr.type === 'entity.parse.failed') {
+    res.status(400).json({
+      success: false,
+      error: 'Malformed request body — expected valid JSON.',
+    });
+    return;
+  }
+
   // Axios / network errors reaching the AI service
   const axiosErr = err as { code?: string; config?: { baseURL?: string } };
   if (

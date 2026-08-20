@@ -9,6 +9,7 @@ import dashboardRoutes from './dashboard.routes';
 import searchAgentsRoutes from './searchAgents.routes';
 import apiKeysRoutes from './apiKeys.routes';
 import billingRoutes from './billing.routes';
+import autoApplyRoutes from './autoApply.routes';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use('/dashboard', dashboardRoutes);
 router.use('/search-agents', searchAgentsRoutes);
 router.use('/keys', apiKeysRoutes);
 router.use('/dashboard/billing', billingRoutes);
+router.use('/auto-apply', autoApplyRoutes);
 
 export default router;

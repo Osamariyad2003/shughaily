@@ -3,7 +3,10 @@ import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import Spinner from '@/components/ui/Spinner'
+import AutoApplySettingsCard from '@/components/settings/AutoApplySettingsCard'
 import { usersService } from '@/services/users.service'
+import { useTranslation } from '@/store/i18nStore'
+import type { Locale } from '@/lib/locales'
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
@@ -13,7 +16,7 @@ export default function SettingsPage() {
   const [name, setName] = useState('')
   const [country, setCountry] = useState('')
   const [city, setCity] = useState('')
-  const [language, setLanguage] = useState('ar')
+  const { t, dir, language, setLanguage } = useTranslation()
 
   const [targetTitles, setTargetTitles] = useState('')
   const [locations, setLocations] = useState('')
@@ -35,7 +38,10 @@ export default function SettingsPage() {
         setName(profile?.name ?? '')
         setCountry(profile?.country ?? '')
         setCity(profile?.city ?? '')
-        setLanguage(profile?.preferred_language ?? 'ar')
+        // The server-persisted preference is the source of truth on load —
+        // it may differ from whatever was last set locally (e.g. a
+        // different device). setLanguage also updates `dir` immediately.
+        setLanguage((profile?.preferred_language as Locale) ?? 'ar')
 
         setTargetTitles((preferences?.target_titles ?? []).join(', '))
         setLocations((preferences?.preferred_locations ?? []).join(', '))
@@ -48,6 +54,10 @@ export default function SettingsPage() {
     }
 
     void load()
+    // Only run once on mount — `setLanguage` is stable (zustand action),
+    // and we don't want this effect re-firing every time the language
+    // itself changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleProfileSave = async () => {
@@ -88,82 +98,84 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-3xl font-bold text-[#0F172A]">الإعدادات</h1>
-        <p className="mt-2 text-sm text-[#64748B]">حدث ملفك الشخصي وتفضيلات البحث عن الوظائف.</p>
+        <h1 className="text-3xl font-bold text-[#0F172A]">{t('settings.title')}</h1>
+        <p className="mt-2 text-sm text-[#64748B]">{t('settings.subtitle')}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="space-y-4 border border-[#E2E8F0]">
-          <h2 className="text-lg font-semibold text-[#0F172A]">الملف الشخصي</h2>
-          <Input label="الاسم" value={name} onChange={(event) => setName(event.target.value)} />
-          <Input label="الدولة" value={country} onChange={(event) => setCountry(event.target.value)} />
-          <Input label="المدينة" value={city} onChange={(event) => setCity(event.target.value)} />
+          <h2 className="text-lg font-semibold text-[#0F172A]">{t('settings.profile.title')}</h2>
+          <Input label={t('settings.profile.name')} value={name} onChange={(event) => setName(event.target.value)} />
+          <Input label={t('settings.profile.country')} value={country} onChange={(event) => setCountry(event.target.value)} />
+          <Input label={t('settings.profile.city')} value={city} onChange={(event) => setCity(event.target.value)} />
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#0F172A]">اللغة</label>
+            <label className="mb-1.5 block text-sm font-medium text-[#0F172A]">{t('settings.profile.language')}</label>
             <select
-              className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#0F172A]"
+              className="w-full rounded-lg border border-[#E2E8F0] bg-[var(--rushd-surface-alt)] px-3 py-2 text-sm text-[#0F172A]"
               value={language}
-              onChange={(event) => setLanguage(event.target.value)}
+              onChange={(event) => setLanguage(event.target.value as Locale)}
             >
-              <option value="ar">العربية</option>
-              <option value="en">English</option>
+              <option value="ar">{t('settings.profile.language.ar')}</option>
+              <option value="en">{t('settings.profile.language.en')}</option>
             </select>
           </div>
 
           <Button onClick={handleProfileSave} loading={savingProfile}>
-            حفظ الملف الشخصي
+            {t('settings.profile.save')}
           </Button>
         </Card>
 
         <Card className="space-y-4 border border-[#E2E8F0]">
-          <h2 className="text-lg font-semibold text-[#0F172A]">تفضيلات الوظائف</h2>
+          <h2 className="text-lg font-semibold text-[#0F172A]">{t('settings.preferences.title')}</h2>
           <Input
-            label="المسميات المستهدفة"
+            label={t('settings.preferences.targetTitles')}
             value={targetTitles}
             onChange={(event) => setTargetTitles(event.target.value)}
-            placeholder="مثال: مطور React, محلل بيانات"
+            placeholder={t('settings.preferences.targetTitles.placeholder')}
           />
           <Input
-            label="المواقع المفضلة"
+            label={t('settings.preferences.locations')}
             value={locations}
             onChange={(event) => setLocations(event.target.value)}
-            placeholder="مثال: عمّان, الرياض, عن بعد"
+            placeholder={t('settings.preferences.locations.placeholder')}
           />
           <Input
-            label="القطاعات"
+            label={t('settings.preferences.industries')}
             value={industries}
             onChange={(event) => setIndustries(event.target.value)}
-            placeholder="مثال: تقنية, تعليم"
+            placeholder={t('settings.preferences.industries.placeholder')}
           />
           <Input
-            label="الحد الأدنى للراتب"
+            label={t('settings.preferences.minSalary')}
             type="number"
             value={minSalary}
             onChange={(event) => setMinSalary(event.target.value)}
           />
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#0F172A]">نوع العمل</label>
+            <label className="mb-1.5 block text-sm font-medium text-[#0F172A]">{t('settings.preferences.workType')}</label>
             <select
-              className="w-full rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#0F172A]"
+              className="w-full rounded-lg border border-[#E2E8F0] bg-[var(--rushd-surface-alt)] px-3 py-2 text-sm text-[#0F172A]"
               value={workType}
               onChange={(event) => setWorkType(event.target.value)}
             >
-              <option value="">غير محدد</option>
-              <option value="full_time">دوام كامل</option>
-              <option value="part_time">دوام جزئي</option>
-              <option value="contract">عقد</option>
-              <option value="remote">عن بعد</option>
+              <option value="">{t('settings.preferences.workType.unspecified')}</option>
+              <option value="full_time">{t('settings.preferences.workType.fullTime')}</option>
+              <option value="part_time">{t('settings.preferences.workType.partTime')}</option>
+              <option value="contract">{t('settings.preferences.workType.contract')}</option>
+              <option value="remote">{t('settings.preferences.workType.remote')}</option>
             </select>
           </div>
 
           <Button onClick={handlePreferencesSave} loading={savingPreferences}>
-            حفظ التفضيلات
+            {t('settings.preferences.save')}
           </Button>
         </Card>
+
+        <AutoApplySettingsCard />
       </div>
     </div>
   )

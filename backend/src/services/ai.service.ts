@@ -9,7 +9,14 @@ class AiService {
     this.client = axios.create({
       baseURL: config.flaskAiUrl,
       timeout: 180_000, // Local CPU parsing and LLM fallback can exceed a minute.
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Proves this request came from us — ai-service rejects every
+        // /api/* call missing/mismatching this (see its before_request
+        // handler). Without it, the AI service has no way to tell "the
+        // real backend" apart from anything else that can reach it.
+        'X-Internal-Auth': config.internalAuthToken,
+      },
     });
   }
 
@@ -37,6 +44,26 @@ class AiService {
       user_id: userId,
       resume_id: resumeId,
       filters,
+    });
+    return data;
+  }
+
+  /**
+   * Score an explicit, caller-supplied list of jobs against one resume in a
+   * single batched request. Used by the search-agent runner so a full run
+   * doesn't fan out into one AI call per job. Unlike matchJobs(), this only
+   * ever writes `matches` rows for the given job_ids — it never touches the
+   * user's other match history.
+   */
+  async matchJobsBatch(
+    userId: string,
+    resumeId: string,
+    jobIds: string[],
+  ): Promise<Record<string, unknown>> {
+    const { data } = await this.client.post('/api/match-jobs-batch', {
+      user_id: userId,
+      resume_id: resumeId,
+      job_ids: jobIds,
     });
     return data;
   }
@@ -96,8 +123,9 @@ class AiService {
   /**
    * Run ATS compatibility checks on a parsed resume.
    */
-  async atsCheck(resumeId: string): Promise<Record<string, unknown>> {
+  async atsCheck(userId: string, resumeId: string): Promise<Record<string, unknown>> {
     const { data } = await this.client.post('/api/ats-check', {
+      user_id: userId,
       resume_id: resumeId,
     });
     return data;

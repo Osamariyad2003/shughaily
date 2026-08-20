@@ -93,14 +93,19 @@ CREATE TABLE search_agents (
     work_modes          TEXT[]       NOT NULL DEFAULT '{}'::text[],
     industries          TEXT[]       NOT NULL DEFAULT '{}'::text[],
     company_sizes       TEXT[]       NOT NULL DEFAULT '{}'::text[],
-    salary_amount       INTEGER,
-    salary_currency     VARCHAR(10),
-    salary_period       VARCHAR(20)  NOT NULL DEFAULT 'monthly',
     include_keywords    TEXT[]       NOT NULL DEFAULT '{}'::text[],
     exclude_keywords    TEXT[]       NOT NULL DEFAULT '{}'::text[],
     blacklist_companies TEXT[]       NOT NULL DEFAULT '{}'::text[],
-    source_preferences  TEXT[]       NOT NULL DEFAULT ARRAY['linkedin', 'company_careers', 'greenhouse', 'lever', 'ashby']::text[],
+    source_preferences  TEXT[]       NOT NULL DEFAULT ARRAY['linkedin', 'google_jobs', 'remotive', 'remoteok', 'arbeitnow', 'themuse']::text[],
+    -- Recency cutoff: drop results whose posted_at is older than this many
+    -- days (see runSearchAgentInner's recency filter). Default 30 = "last
+    -- 30 days".
+    max_age_days        INTEGER      NOT NULL DEFAULT 30 CHECK (max_age_days BETWEEN 1 AND 365),
     active              BOOLEAN      NOT NULL DEFAULT TRUE,
+    -- Lifecycle status for the async-create flow: 'searching' while a run
+    -- is queued/in-flight, so the frontend can poll instead of blocking.
+    status              VARCHAR(20)  NOT NULL DEFAULT 'idle'
+                         CHECK (status IN ('idle', 'searching', 'ready', 'error')),
     last_run_at         TIMESTAMPTZ,
     new_jobs_count      INTEGER      NOT NULL DEFAULT 0,
     avg_match_score     DECIMAL(5,2) NOT NULL DEFAULT 0,
@@ -153,12 +158,19 @@ CREATE TABLE jobs (
     employment_type   VARCHAR(50),
     apply_url         TEXT,
     employer_logo     TEXT,
+    -- The posting's actual publication date, normalized from whatever
+    -- format the source reported (absolute/relative-English/relative-
+    -- Arabic/Unix timestamp — see parseJobPostedDate()). NULL means
+    -- "unknown", not "very old" — many sources omit this entirely.
+    -- Distinct from created_at (when WE first ingested the row).
+    posted_at         TIMESTAMPTZ,
     created_at        TIMESTAMPTZ  DEFAULT NOW(),
 
     CONSTRAINT uq_jobs_source_external_id UNIQUE (source, external_id)
 );
 
 CREATE INDEX idx_jobs_normalized_title ON jobs(normalized_title);
+CREATE INDEX idx_jobs_posted_at ON jobs(posted_at);
 
 -- =============================================================================
 -- matches

@@ -1,4 +1,5 @@
 import { cn } from '../../lib/utils'
+import { useTranslation } from '@/store/i18nStore'
 
 interface SpinnerProps {
   size?: 'sm' | 'md' | 'lg'
@@ -12,13 +13,14 @@ const sizeMap = {
 }
 
 export default function Spinner({ size = 'md', className }: SpinnerProps) {
+  const { t } = useTranslation()
   return (
     <svg
       className={cn('animate-spin text-current', sizeMap[size], className)}
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       viewBox="0 0 24 24"
-      aria-label="جاري التحميل"
+      aria-label={t('common.loading')}
     >
       <circle
         className="opacity-25"

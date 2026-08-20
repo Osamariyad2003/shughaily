@@ -128,7 +128,7 @@ export const atsCheck = asyncHandler(async (req: Request, res: Response): Promis
     throw new AppError('Resume not found.', 404);
   }
 
-  const result = await aiService.atsCheck(resolvedResumeId);
+  const result = await aiService.atsCheck(authReq.user.id, resolvedResumeId);
   res.json({ success: true, data: result });
 });
 

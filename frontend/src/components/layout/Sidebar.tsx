@@ -13,6 +13,8 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { useTranslation } from '@/store/i18nStore'
+import type { TranslationKey } from '@/lib/locales'
 
 interface SidebarProps {
   currentPath: string
@@ -22,15 +24,15 @@ interface SidebarProps {
   onMobileClose?: () => void
 }
 
-const navItems = [
-  { label: 'الرئيسية', icon: LayoutDashboard, path: '/dashboard' },
-  { label: 'الوظائف', icon: Briefcase, path: '/jobs' },
-  { label: 'طلباتي', icon: FileText, path: '/applications' },
-  { label: 'سيرتي الذاتية', icon: FileUp, path: '/resume' },
-  { label: 'المحفوظات', icon: Bookmark, path: '/saved' },
-  { label: 'المساعد', icon: MessageCircle, path: '/copilot' },
-  { label: 'الفوترة', icon: CreditCard, path: '/billing' },
-  { label: 'الإعدادات', icon: Settings, path: '/settings' },
+const navItems: { labelKey: TranslationKey; icon: typeof LayoutDashboard; path: string }[] = [
+  { labelKey: 'sidebar.dashboard', icon: LayoutDashboard, path: '/dashboard' },
+  { labelKey: 'sidebar.jobs', icon: Briefcase, path: '/jobs' },
+  { labelKey: 'sidebar.applications', icon: FileText, path: '/applications' },
+  { labelKey: 'sidebar.resume', icon: FileUp, path: '/resume' },
+  { labelKey: 'sidebar.saved', icon: Bookmark, path: '/saved' },
+  { labelKey: 'sidebar.copilot', icon: MessageCircle, path: '/copilot' },
+  { labelKey: 'sidebar.billing', icon: CreditCard, path: '/billing' },
+  { labelKey: 'sidebar.settings', icon: Settings, path: '/settings' },
 ]
 
 export default function Sidebar({
@@ -41,30 +43,37 @@ export default function Sidebar({
   onMobileClose,
 }: SidebarProps) {
   const isActive = (path: string) => currentPath === path || currentPath.startsWith(`${path}/`)
+  const { t, dir } = useTranslation()
+  // The sidebar always sits on the leading (start) edge — right in RTL,
+  // left in LTR — so the collapse chevron's "point this way to expand"
+  // meaning flips along with it.
+  const CollapseIcon = dir === 'rtl'
+    ? (collapsed ? ChevronLeft : ChevronRight)
+    : (collapsed ? ChevronRight : ChevronLeft)
 
   const sidebarContent = (
     <div
       className={cn(
-        'flex h-full flex-col border-l border-[#E2E8F0] bg-white transition-all duration-200',
+        'flex h-full flex-col border-e border-[#E2E8F0] bg-white transition-all duration-200',
         collapsed ? 'w-[72px]' : 'w-64',
       )}
-      dir="rtl"
+      dir={dir}
     >
       <div className="flex h-16 items-center justify-between border-b border-[#E2E8F0] px-4">
-        {!collapsed && <h1 className="text-xl font-bold text-[#0EA5A4]">الشغيلي</h1>}
+        {!collapsed && <h1 className="text-xl font-bold text-[#0EA5A4]">{t('sidebar.brand')}</h1>}
         <button
           onClick={() => onCollapsedChange?.(!collapsed)}
-          className="hidden cursor-pointer rounded-lg p-1.5 text-[#64748B] transition-colors hover:bg-[#F8FAFC] lg:flex"
-          aria-label={collapsed ? 'توسيع القائمة' : 'تصغير القائمة'}
+          className="hidden cursor-pointer rounded-lg p-1.5 text-[#64748B] transition-colors hover:bg-[var(--rushd-surface-alt)] hover:text-[var(--rushd-ink-soft)] lg:flex"
+          aria-label={collapsed ? t('common.expandMenu') : t('common.collapseMenu')}
         >
-          {collapsed ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+          <CollapseIcon className="h-5 w-5" />
         </button>
 
         {mobileOpen && (
           <button
             onClick={onMobileClose}
-            className="cursor-pointer rounded-lg p-1.5 text-[#64748B] hover:bg-[#F8FAFC] lg:hidden"
-            aria-label="إغلاق القائمة"
+            className="cursor-pointer rounded-lg p-1.5 text-[#64748B] hover:bg-[var(--rushd-surface-alt)] hover:text-[var(--rushd-ink-soft)] lg:hidden"
+            aria-label={t('common.close')}
           >
             <X className="h-5 w-5" />
           </button>
@@ -74,6 +83,7 @@ export default function Sidebar({
       <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-4">
         {navItems.map((item) => {
           const Icon = item.icon
+          const label = t(item.labelKey)
 
           return (
             <Link
@@ -84,13 +94,13 @@ export default function Sidebar({
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                 isActive(item.path)
                   ? 'bg-[#CCFBF1] text-[#0F766E]'
-                  : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F172A]',
+                  : 'text-[#64748B] hover:bg-[var(--rushd-surface-alt)] hover:text-[#0F172A]',
                 collapsed && 'justify-center px-2',
               )}
-              title={collapsed ? item.label : undefined}
+              title={collapsed ? label : undefined}
             >
               <Icon className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && <span>{label}</span>}
             </Link>
           )
         })}
@@ -104,8 +114,8 @@ export default function Sidebar({
 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <button className="absolute inset-0 bg-black/30" onClick={onMobileClose} aria-label="إغلاق" />
-          <aside className="absolute right-0 top-0 z-50 h-full shadow-xl">{sidebarContent}</aside>
+          <button className="absolute inset-0 bg-black/30" onClick={onMobileClose} aria-label={t('common.close')} />
+          <aside className="absolute start-0 top-0 z-50 h-full shadow-xl">{sidebarContent}</aside>
         </div>
       )}
     </>

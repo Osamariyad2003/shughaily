@@ -1,0 +1,112 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Rushd Design System — Tokens
+   Brand fonts + design tokens as CSS custom properties.
+   RTL is the default writing mode for the whole app; all Rushd components
+   are built with logical properties (margin-inline, inset-inline-*, etc.)
+   so nothing here needs a mirrored LTR variant.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Thmanyah Sans — used for all UI text.
+ *
+ * STATUS (2026-08-14): only Bold (700) and Black (900) shipped clean from
+ * the last font bundle — Regular/Light/Medium came through corrupted
+ * (AppleDouble/.DS_Store artifacts from a Mac-originated zip) and are not
+ * wired in. Because of that, `--rushd-font-sans` below is NOT yet applied
+ * as the global body default in index.css — with no 400-weight face
+ * registered, any element requesting weight 400 would be matched to this
+ * 700 face and render bold. Once a clean Regular/Medium/Light bundle
+ * lands, add their @font-face rules here and flip body's font-family in
+ * index.css over to var(--rushd-font-sans).
+ */
+@font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('/fonts/thmanyahsans-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Thmanyah Sans';
+  src: url('/fonts/thmanyahsans-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Thmanyah Serif Display — large headings only.
+ * STATUS: pending. Every file for this family in the last bundle was
+ * corrupted (AppleDouble stubs or literal .DS_Store files, 120–1163 bytes,
+ * confirmed via `file`) — nothing real to reference yet. --rushd-font-serif
+ * below currently just falls through to Thmanyah Sans / system fallbacks. */
+
+/* Thmanyah Serif Text — long-form reading (job descriptions), optional.
+ * STATUS: pending, same corrupted-bundle issue as Serif Display. */
+
+:root {
+  /* Brand */
+  --rushd-primary: #0F5C5C;
+  --rushd-primary-hover: #0C4A4A;
+  --rushd-primary-soft: #E3EFEE;
+  --rushd-accent: #E8A33D;
+  --rushd-accent-hover: #D4901F;
+
+  /* Surface */
+  --rushd-bg: #FBF7F0;
+  --rushd-surface: #FFFFFF;
+  --rushd-surface-alt: #F5EFE4;
+
+  /* Ink */
+  --rushd-ink: #14201E;
+  --rushd-ink-soft: #4A5754;
+  --rushd-ink-faint: #8A938F;
+
+  /* Border */
+  --rushd-border: #E7DECF;
+  --rushd-border-strong: #D8CDB8;
+
+  /* Semantic */
+  --rushd-success: #2F855A;
+  --rushd-success-soft: #E7F4EC;
+  --rushd-warning: #B7791F;
+  --rushd-warning-soft: #FBF0DD;
+  --rushd-danger: #C53030;
+  --rushd-danger-soft: #FBE7E7;
+  --rushd-info: #2B6CB0;
+  --rushd-info-soft: #E5EEF8;
+
+  /* Radius */
+  --rushd-radius-sm: 8px;
+  --rushd-radius-md: 12px;
+  --rushd-radius-lg: 18px;
+  --rushd-radius-pill: 999px;
+
+  /* Spacing — 4px base scale */
+  --rushd-space-1: 4px;
+  --rushd-space-2: 8px;
+  --rushd-space-3: 12px;
+  --rushd-space-4: 16px;
+  --rushd-space-5: 20px;
+  --rushd-space-6: 24px;
+  --rushd-space-8: 32px;
+  --rushd-space-10: 40px;
+  --rushd-space-12: 48px;
+  --rushd-space-16: 64px;
+
+  /* Type scale */
+  --rushd-text-xs: 12px;
+  --rushd-text-sm: 14px;
+  --rushd-text-md: 16px;
+  --rushd-text-lg: 19px;
+  --rushd-text-xl: 24px;
+  --rushd-text-2xl: 32px;
+  --rushd-text-3xl: 44px;
+  --rushd-line-body: 1.7;
+
+  /* Fonts */
+  --rushd-font-sans: 'Thmanyah Sans', 'IBM Plex Sans Arabic', 'Noto Sans Arabic', system-ui, sans-serif;
+  --rushd-font-serif: 'Thmanyah Serif Display', 'Thmanyah Sans', 'IBM Plex Sans Arabic', serif;
+  /* Long-form reading (job-description body copy). Falls through to the
+   * sans stack until a clean Serif Text bundle lands — see STATUS note above. */
+  --rushd-font-serif-text: 'Thmanyah Serif Text', 'Thmanyah Sans', 'IBM Plex Sans Arabic', serif;
+}

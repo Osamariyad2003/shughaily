@@ -42,6 +42,12 @@ export const config = {
 
   // Flask AI micro-service
   flaskAiUrl: requireEnv('FLASK_AI_URL', 'http://localhost:5050'),
+  // Shared secret sent to the AI service on every request (X-Internal-Auth
+  // header — see ai-service's app.py before_request handler). No fallback:
+  // this is a real secret, so a missing value must fail startup rather
+  // than silently sending an empty/absent header the AI service would
+  // then have to choose whether to accept.
+  internalAuthToken: requireEnv('INTERNAL_AUTH_TOKEN'),
 
   // Cloudflare R2 storage
   r2: {
@@ -64,6 +70,18 @@ export const config = {
 
   // CORS
   corsOrigin: requireEnv('CORS_ORIGIN', 'http://localhost:5173'),
+
+  // Outbound mail (SMTP). Used by the email auto-apply feature and future
+  // notification email. All optional — when SMTP_HOST is unset, mailer.service
+  // runs in a safe no-op/log-only mode instead of throwing at boot.
+  smtp: {
+    host: readOptionalEnv('SMTP_HOST'),
+    port: parseInt(readOptionalEnv('SMTP_PORT') || '587', 10),
+    secure: readOptionalEnv('SMTP_SECURE') === 'true',
+    user: readOptionalEnv('SMTP_USER'),
+    pass: readOptionalEnv('SMTP_PASS'),
+    fromAddress: readOptionalEnv('SMTP_FROM') || 'الشغيلي <no-reply@shughaily.app>',
+  },
 } as const;
 
 export type Config = typeof config;

@@ -5,7 +5,6 @@ import {
   createSearchAgentController,
   deleteSearchAgentController,
   getCandidateProfileSummaryController,
-  getSearchAgentQueryPlanController,
   getSearchAgents,
   runSearchAgentController,
   updateSearchAgentController,
@@ -22,7 +21,6 @@ router.use(authenticate as never);
 
 router.get('/', getSearchAgents);
 router.get('/candidate-profile', getCandidateProfileSummaryController);
-router.get('/:id/query-plan', validate(searchAgentIdSchema, 'params'), getSearchAgentQueryPlanController);
 router.post('/', validate(createSearchAgentSchema), createSearchAgentController);
 router.post('/:id/run', validate(searchAgentIdSchema, 'params'), runSearchAgentController);
 router.patch('/:id', validate(searchAgentIdSchema, 'params'), validate(updateSearchAgentSchema), updateSearchAgentController);

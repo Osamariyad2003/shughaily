@@ -4,10 +4,12 @@ import Badge from '@/components/ui/Badge'
 import Spinner from '@/components/ui/Spinner'
 import { useSavedJobs } from '@/hooks/useJobs'
 import { truncateText } from '@/lib/utils'
+import { useTranslation } from '@/store/i18nStore'
 
 export default function SavedJobsPage() {
   const savedJobsQuery = useSavedJobs()
   const jobs = savedJobsQuery.data?.data ?? []
+  const { t, dir } = useTranslation()
 
   if (savedJobsQuery.isLoading) {
     return (
@@ -18,11 +20,11 @@ export default function SavedJobsPage() {
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-3xl font-bold text-[#0F172A]">الوظائف المحفوظة</h1>
+        <h1 className="text-3xl font-bold text-[#0F172A]">{t('saved.title')}</h1>
         <p className="mt-2 text-sm text-[#64748B]">
-          ارجع إلى الفرص التي أثارت اهتمامك وقرر أيها يستحق التقديم عليه أولاً.
+          {t('saved.subtitle')}
         </p>
       </div>
 
@@ -35,21 +37,21 @@ export default function SavedJobsPage() {
                   {job.title}
                 </Link>
                 <p className="mt-1 text-sm text-[#64748B]">
-                  {job.company ?? 'شركة غير محددة'}{job.location ? ` • ${job.location}` : ''}
+                  {job.company ?? t('common.companyUnspecified')}{job.location ? ` • ${job.location}` : ''}
                 </p>
               </div>
               {job.employment_type && <Badge variant="neutral">{job.employment_type}</Badge>}
             </div>
 
             <p className="mt-4 text-sm leading-6 text-[#475569]">
-              {truncateText(job.description ?? 'لا يوجد وصف متاح حالياً.', 220)}
+              {truncateText(job.description ?? t('common.noDescription'), 220)}
             </p>
           </Card>
         ))}
 
         {jobs.length === 0 && (
           <Card className="border border-dashed border-[#CBD5E1] text-center text-sm text-[#64748B]">
-            لم تحفظ أي وظيفة بعد.
+            {t('saved.empty')}
           </Card>
         )}
       </div>

@@ -1,0 +1,24 @@
+# Local-development-only host port mappings for Postgres and Redis.
+#
+# `docker compose` auto-loads this file ALONGSIDE docker-compose.yml when
+# you run `docker compose up` with no `-f` flags — convenient for local dev
+# (psql/a GUI client on your host), but that auto-load is exactly why this
+# file must never ship to a shared/prod-like environment: deploy tooling and
+# any shared/staging server MUST invoke compose explicitly as
+# `docker compose -f docker-compose.yml up` (or set `COMPOSE_FILE=docker-compose.yml`)
+# so this override is never picked up. Do not add ai-service here — it has
+# no legitimate reason to be reachable from the host; use `docker compose
+# exec ai-service ...` or a debugger attached to the container instead.
+#
+# This file is intentionally NOT protected by any secret and maps ports
+# with no auth in front of them — treat any host it runs on as exposing
+# your local dev database and cache to your local network.
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"

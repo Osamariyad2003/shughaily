@@ -15,7 +15,7 @@ const variantStyles = {
   secondary:
     'border border-[#0EA5A4] text-[#0EA5A4] hover:bg-[#CCFBF1] focus:ring-[#0EA5A4]/20',
   ghost:
-    'text-[#64748B] hover:bg-[#F8FAFC] focus:ring-slate-200',
+    'text-[#64748B] hover:bg-[var(--rushd-surface-alt)] hover:text-[#0F172A] focus:ring-slate-200',
 }
 
 const sizeStyles = {

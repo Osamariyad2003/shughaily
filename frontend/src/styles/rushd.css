@@ -1,0 +1,416 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Rushd Design System — Component styles
+   Built entirely with logical properties so the app never needs a
+   mirrored LTR code path. Depends on tokens.css being loaded first.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Button ─────────────────────────────────────────────────────────── */
+
+.rushd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rushd-space-2);
+  font-family: var(--rushd-font-sans);
+  font-weight: 600;
+  border-radius: var(--rushd-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.rushd-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rushd-btn:focus-visible {
+  outline: 2px solid var(--rushd-primary);
+  outline-offset: 2px;
+}
+
+.rushd-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.rushd-btn--sm {
+  padding-block: var(--rushd-space-1);
+  padding-inline: var(--rushd-space-3);
+  font-size: var(--rushd-text-xs);
+}
+
+.rushd-btn--md {
+  padding-block: var(--rushd-space-2);
+  padding-inline: var(--rushd-space-4);
+  font-size: var(--rushd-text-sm);
+}
+
+.rushd-btn--lg {
+  padding-block: var(--rushd-space-3);
+  padding-inline: var(--rushd-space-6);
+  font-size: var(--rushd-text-md);
+}
+
+/* Icon-only buttons (no label): balance the inline padding so the icon
+   sits in a roughly square hit area instead of the wider text padding. */
+.rushd-btn--icon-only.rushd-btn--sm {
+  padding-inline: var(--rushd-space-2);
+}
+.rushd-btn--icon-only.rushd-btn--md {
+  padding-inline: var(--rushd-space-3);
+}
+.rushd-btn--icon-only.rushd-btn--lg {
+  padding-inline: var(--rushd-space-4);
+}
+
+.rushd-btn--primary {
+  background: var(--rushd-primary);
+  color: #fff;
+}
+.rushd-btn--primary:hover:not(:disabled) {
+  background: var(--rushd-primary-hover);
+}
+
+.rushd-btn--accent {
+  background: var(--rushd-accent);
+  color: var(--rushd-ink);
+}
+.rushd-btn--accent:hover:not(:disabled) {
+  background: var(--rushd-accent-hover);
+}
+
+.rushd-btn--secondary {
+  background: var(--rushd-surface);
+  color: var(--rushd-primary);
+  border-color: var(--rushd-border-strong);
+}
+.rushd-btn--secondary:hover:not(:disabled) {
+  background: var(--rushd-primary-soft);
+  border-color: var(--rushd-primary);
+}
+
+.rushd-btn--ghost {
+  background: transparent;
+  color: var(--rushd-ink-soft);
+}
+.rushd-btn--ghost:hover:not(:disabled) {
+  background: var(--rushd-surface-alt);
+  color: var(--rushd-ink);
+}
+
+.rushd-btn--danger {
+  background: var(--rushd-danger);
+  color: #fff;
+}
+.rushd-btn--danger:hover:not(:disabled) {
+  background: #A82727;
+}
+
+.rushd-btn__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* ── Card ───────────────────────────────────────────────────────────── */
+
+.rushd-card {
+  background: var(--rushd-surface);
+  border: 1px solid var(--rushd-border);
+  border-radius: var(--rushd-radius-lg);
+  padding: var(--rushd-space-6);
+  box-shadow: 0 1px 2px rgba(20, 32, 30, 0.04);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.rushd-card--hover-lift:hover {
+  box-shadow: 0 12px 24px -12px rgba(20, 32, 30, 0.18);
+  transform: translateY(-2px);
+  border-color: var(--rushd-border-strong);
+}
+
+.rushd-card--clickable {
+  cursor: pointer;
+}
+.rushd-card--clickable:focus-visible {
+  outline: 2px solid var(--rushd-primary);
+  outline-offset: 2px;
+}
+
+/* ── StatusBadge ────────────────────────────────────────────────────── */
+
+.rushd-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rushd-space-1);
+  padding-block: 2px;
+  padding-inline: var(--rushd-space-2);
+  border-radius: var(--rushd-radius-pill);
+  font-family: var(--rushd-font-sans);
+  font-size: var(--rushd-text-xs);
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.rushd-status-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.rushd-status-badge--new {
+  background: var(--rushd-info-soft);
+  color: var(--rushd-info);
+}
+.rushd-status-badge--new .rushd-status-badge__dot {
+  background: var(--rushd-info);
+}
+
+.rushd-status-badge--applied {
+  background: var(--rushd-primary-soft);
+  color: var(--rushd-primary);
+}
+.rushd-status-badge--applied .rushd-status-badge__dot {
+  background: var(--rushd-primary);
+}
+
+.rushd-status-badge--interview {
+  background: var(--rushd-warning-soft);
+  color: var(--rushd-warning);
+}
+.rushd-status-badge--interview .rushd-status-badge__dot {
+  background: var(--rushd-warning);
+}
+
+.rushd-status-badge--offer {
+  background: var(--rushd-success-soft);
+  color: var(--rushd-success);
+}
+.rushd-status-badge--offer .rushd-status-badge__dot {
+  background: var(--rushd-success);
+}
+
+.rushd-status-badge--rejected {
+  background: var(--rushd-danger-soft);
+  color: var(--rushd-danger);
+}
+.rushd-status-badge--rejected .rushd-status-badge__dot {
+  background: var(--rushd-danger);
+}
+
+/* ── JobCard ────────────────────────────────────────────────────────── */
+
+.rushd-jobcard {
+  position: relative;
+  display: block;
+  background: var(--rushd-surface);
+  border: 1px solid var(--rushd-border);
+  border-radius: var(--rushd-radius-lg);
+  padding: var(--rushd-space-5);
+  padding-inline-end: calc(var(--rushd-space-5) + 8px);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.rushd-jobcard:hover {
+  box-shadow: 0 12px 24px -14px rgba(20, 32, 30, 0.2);
+  transform: translateY(-2px);
+  border-color: var(--rushd-border-strong);
+}
+
+.rushd-jobcard:focus-visible {
+  outline: 2px solid var(--rushd-primary);
+  outline-offset: 2px;
+}
+
+/* Right-anchored accent rule — "right" meaning the trailing/end edge in
+   the default RTL reading direction, expressed with logical properties so
+   nothing needs to flip if a page ever renders LTR. */
+.rushd-jobcard__accent-rule {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 4px;
+  background: var(--rushd-accent);
+  border-start-end-radius: var(--rushd-radius-lg);
+  border-end-end-radius: var(--rushd-radius-lg);
+}
+
+.rushd-jobcard__body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--rushd-space-4);
+}
+
+.rushd-jobcard__main {
+  min-width: 0;
+  flex: 1;
+}
+
+.rushd-jobcard__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--rushd-space-2);
+  margin: 0 0 var(--rushd-space-2);
+  min-width: 0;
+}
+
+.rushd-jobcard__title {
+  font-size: var(--rushd-text-lg);
+  font-weight: 700;
+  color: var(--rushd-ink);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.rushd-jobcard__remote-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--rushd-text-xs);
+  font-weight: 600;
+  background: var(--rushd-success-soft);
+  color: var(--rushd-success);
+}
+
+.rushd-jobcard__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rushd-space-4);
+  margin-block-end: var(--rushd-space-3);
+}
+
+.rushd-jobcard__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--rushd-text-sm);
+  color: var(--rushd-ink-soft);
+}
+
+.rushd-jobcard__description {
+  font-size: var(--rushd-text-sm);
+  line-height: var(--rushd-line-body);
+  color: var(--rushd-ink-soft);
+  margin: 0 0 var(--rushd-space-3);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rushd-jobcard__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rushd-space-3);
+  margin-block-start: var(--rushd-space-2);
+}
+
+.rushd-jobcard__date {
+  font-size: var(--rushd-text-xs);
+  color: var(--rushd-ink-faint);
+}
+
+.rushd-jobcard__save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--rushd-radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--rushd-ink-faint);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.rushd-jobcard__save:hover {
+  background: var(--rushd-surface-alt);
+  color: var(--rushd-ink);
+}
+.rushd-jobcard__save:focus-visible {
+  outline: 2px solid var(--rushd-primary);
+  outline-offset: 2px;
+}
+.rushd-jobcard__save--active {
+  color: var(--rushd-accent);
+}
+
+/* Match-score ring — green ≥80, saffron ≥55, grey below */
+.rushd-match-ring {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.rushd-match-ring__track {
+  stroke: var(--rushd-border);
+}
+
+.rushd-match-ring__value {
+  stroke: var(--rushd-ink-faint);
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+.rushd-match-ring--high .rushd-match-ring__value {
+  stroke: var(--rushd-success);
+}
+.rushd-match-ring--mid .rushd-match-ring__value {
+  stroke: var(--rushd-accent);
+}
+.rushd-match-ring--low .rushd-match-ring__value {
+  stroke: var(--rushd-ink-faint);
+}
+
+.rushd-match-ring__value-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--rushd-ink);
+}
+
+/* ── Shared utility ─────────────────────────────────────────────────── */
+
+.rushd-display {
+  font-family: var(--rushd-font-serif);
+}
+
+/* Long-form reading — job-description body copy. Slightly more leading
+ * than the UI default since Thmanyah wants extra room at reading sizes. */
+.rushd-reading {
+  font-family: var(--rushd-font-serif-text);
+  line-height: 1.8;
+}
+
+/* ── Motion ─────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .rushd-btn,
+  .rushd-card,
+  .rushd-jobcard,
+  .rushd-match-ring__value {
+    transition-duration: 0.01ms !important;
+  }
+  .rushd-card--hover-lift:hover,
+  .rushd-jobcard:hover,
+  .rushd-btn:active:not(:disabled) {
+    transform: none !important;
+  }
+}

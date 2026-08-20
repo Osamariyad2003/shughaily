@@ -19,7 +19,7 @@ export default function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-      <div className="w-16 h-16 rounded-full bg-[#F8FAFC] flex items-center justify-center mb-4 text-[#64748B]">
+      <div className="w-16 h-16 rounded-full bg-[var(--rushd-surface-alt)] flex items-center justify-center mb-4 text-[var(--rushd-ink-soft)]">
         {icon || <Inbox className="w-8 h-8" />}
       </div>
       <h3 className="text-lg font-bold text-[#0F172A] mb-1">{message}</h3>

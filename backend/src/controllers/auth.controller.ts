@@ -33,12 +33,28 @@ export const register = asyncHandler(async (req: Request, res: Response): Promis
   const password_hash = await bcrypt.hash(password, 12);
   const id = randomUUID();
 
-  const rows = await query<User>(
-    `INSERT INTO users (id, name, email, password_hash, country, city, preferred_language)
-     VALUES ($1, $2, $3, $4, $5, $6, 'ar')
-     RETURNING id, name, email, password_hash, country, city, preferred_language, created_at, updated_at`,
-    [id, name, email, password_hash, country ?? null, city ?? null],
-  );
+  // The SELECT above is a courtesy fast-path (and produces a friendlier
+  // 409 in the common case); the real guarantee is the database's unique
+  // index on lower(email) (migration 007), which closes the TOCTOU window
+  // between that SELECT and this INSERT. If two registrations for the
+  // same mailbox race each other, the loser lands here instead — translate
+  // Postgres's raw unique-violation (23505) into the same clean 409 rather
+  // than letting it fall through to the generic error handler, which would
+  // otherwise leak constraint/table internals in the response.
+  let rows: User[];
+  try {
+    rows = await query<User>(
+      `INSERT INTO users (id, name, email, password_hash, country, city, preferred_language)
+       VALUES ($1, $2, $3, $4, $5, $6, 'ar')
+       RETURNING id, name, email, password_hash, country, city, preferred_language, created_at, updated_at`,
+      [id, name, email, password_hash, country ?? null, city ?? null],
+    );
+  } catch (err) {
+    if ((err as { code?: string }).code === '23505') {
+      throw new AppError('A user with this email already exists.', 409);
+    }
+    throw err;
+  }
 
   await query(
     `INSERT INTO user_preferences (id, user_id, target_titles, preferred_locations, min_salary, work_type, industries)
@@ -125,7 +141,10 @@ export const googleAuth = asyncHandler(async (req: Request, res: Response): Prom
     throw new AppError('Invalid Google token.', 400);
   }
 
-  const { sub: googleId, email, name, picture } = payload;
+  const { sub: googleId, name, picture } = payload;
+  // Normalized the same way as the register/login schemas so a Google
+  // account and a password account for the same mailbox always match.
+  const email = payload.email.trim().toLowerCase();
 
   // Check if user exists by google_id or email
   let rows = await query<User>(

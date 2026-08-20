@@ -6,24 +6,26 @@ import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { useAuthStore } from '@/store/authStore'
+import { useTranslation } from '@/store/i18nStore'
+import type { TranslationKey } from '@/lib/locales'
 
 type AuthMode = 'login' | 'signup'
 
-const highlights = [
+const highlights: { icon: typeof Sparkles; titleKey: TranslationKey; descriptionKey: TranslationKey }[] = [
   {
     icon: Sparkles,
-    title: 'توصيات وظائف ذكية',
-    description: 'احصل على فرص مناسبة لسيرتك الذاتية وتفضيلاتك المهنية.',
+    titleKey: 'authPage.highlight1.title',
+    descriptionKey: 'authPage.highlight1.description',
   },
   {
     icon: FileText,
-    title: 'تحسين السيرة الذاتية',
-    description: 'حلل سيرتك الذاتية بالعربية واقترح تحسينات عملية وسريعة.',
+    titleKey: 'authPage.highlight2.title',
+    descriptionKey: 'authPage.highlight2.description',
   },
   {
     icon: BriefcaseBusiness,
-    title: 'متابعة التقديمات',
-    description: 'احفظ الوظائف وتابع كل مرحلة من التقديم من لوحة واحدة.',
+    titleKey: 'authPage.highlight3.title',
+    descriptionKey: 'authPage.highlight3.description',
   },
 ]
 
@@ -34,6 +36,7 @@ function getMode(value: string | null): AuthMode {
 export default function AuthPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const { t, dir } = useTranslation()
 
   const login = useAuthStore((state) => state.login)
   const register = useAuthStore((state) => state.register)
@@ -46,7 +49,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState(
-    searchParams.get('error') === 'google_failed' ? 'تعذر تسجيل الدخول عبر Google. يرجى المحاولة مرة أخرى.' : ''
+    searchParams.get('error') === 'google_failed' ? t('authPage.error.googleFailed') : ''
   )
 
   const setMode = (nextMode: AuthMode) => {
@@ -60,12 +63,12 @@ export default function AuthPage() {
 
     if (mode === 'signup') {
       if (!name.trim()) {
-        setError('يرجى إدخال الاسم الكامل.')
+        setError(t('authPage.error.nameRequired'))
         return
       }
 
       if (password !== confirmPassword) {
-        setError('كلمتا المرور غير متطابقتين.')
+        setError(t('authPage.error.passwordMismatch'))
         return
       }
     }
@@ -80,13 +83,13 @@ export default function AuthPage() {
       await register(name.trim(), email, password)
       navigate('/onboarding')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذر إكمال العملية حالياً.')
+      setError(err instanceof Error ? err.message : t('authPage.error.generic'))
     }
   }
 
   return (
     <div
-      dir="rtl"
+      dir={dir}
       className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(20,184,166,0.12),_transparent_28%),linear-gradient(180deg,_#F8FAFC_0%,_#ECFEFF_100%)]"
     >
       <div className="mx-auto grid min-h-screen max-w-7xl grid-cols-1 gap-10 px-4 py-8 lg:grid-cols-[1.1fr_0.9fr] lg:px-8 lg:py-10">
@@ -100,38 +103,37 @@ export default function AuthPage() {
                   <Sparkles className="h-5 w-5" />
                 </span>
                 <span>
-                  <span className="block text-lg font-bold">الشغيلي</span>
-                  <span className="block text-sm text-white/70">مساعدك الذكي للوظائف</span>
+                  <span className="block text-lg font-bold">{t('authPage.brand')}</span>
+                  <span className="block text-sm text-white/70">{t('authPage.tagline')}</span>
                 </span>
               </Link>
             </div>
 
             <div className="mt-12 max-w-2xl lg:mt-16">
               <p className="inline-flex rounded-full bg-white/12 px-4 py-1.5 text-sm text-white/85 ring-1 ring-white/15">
-                منصة عربية للبحث الذكي عن العمل
+                {t('authPage.badge')}
               </p>
               <h1 className="mt-6 text-4xl font-bold leading-tight sm:text-5xl">
-                انطلق في رحلة التوظيف
-                <span className="block text-[#99F6E4]">بخطوات أسرع وقرارات أوضح</span>
+                {t('authPage.hero.title1')}
+                <span className="block text-[#99F6E4]">{t('authPage.hero.title2')}</span>
               </h1>
               <p className="mt-5 max-w-xl text-base leading-8 text-white/80 sm:text-lg">
-                ارفع سيرتك الذاتية مرة واحدة، واحصل على توصيات وظائف، وتحسينات للسيرة،
-                ورسائل تغطية، وتحضير للمقابلات من مكان واحد.
+                {t('authPage.hero.description')}
               </p>
             </div>
 
             <div className="mt-10 grid gap-4 sm:grid-cols-3 lg:mt-auto">
               {highlights.map((item, index) => (
                 <motion.div
-                  key={item.title}
+                  key={item.titleKey}
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.35, delay: index * 0.08 }}
                   className="rounded-3xl bg-white/10 p-5 backdrop-blur-sm ring-1 ring-white/10"
                 >
                   <item.icon className="mb-3 h-5 w-5 text-[#99F6E4]" />
-                  <h2 className="text-base font-semibold">{item.title}</h2>
-                  <p className="mt-2 text-sm leading-7 text-white/75">{item.description}</p>
+                  <h2 className="text-base font-semibold">{t(item.titleKey)}</h2>
+                  <p className="mt-2 text-sm leading-7 text-white/75">{t(item.descriptionKey)}</p>
                 </motion.div>
               ))}
             </div>
@@ -147,18 +149,16 @@ export default function AuthPage() {
           >
             <Card className="rounded-[2rem] border border-white/60 bg-white/90 p-6 shadow-xl shadow-slate-200/60 backdrop-blur sm:p-8">
               <div className="text-center">
-                <p className="text-sm font-medium text-[#0EA5A4]">مرحباً بك في الشغيلي</p>
+                <p className="text-sm font-medium text-[#0EA5A4]">{t('authPage.welcome')}</p>
                 <h2 className="mt-2 text-3xl font-bold text-[#0F172A]">
-                  {mode === 'login' ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
+                  {mode === 'login' ? t('auth.login.title') : t('authPage.signup.title')}
                 </h2>
                 <p className="mt-3 text-sm leading-7 text-[#64748B]">
-                  {mode === 'login'
-                    ? 'ادخل إلى حسابك لمتابعة الوظائف المناسبة والتقديمات والسيرة الذاتية.'
-                    : 'أنشئ حسابك وابدأ إعداد مساعدك الذكي للتوظيف خلال دقائق.'}
+                  {mode === 'login' ? t('authPage.login.subtitle') : t('authPage.signup.subtitle')}
                 </p>
               </div>
 
-              <div className="mt-8 grid grid-cols-2 rounded-2xl bg-[#F1F5F9] p-1">
+              <div className="mt-8 grid grid-cols-2 rounded-2xl bg-[var(--rushd-surface-alt)] p-1">
                 <button
                   type="button"
                   onClick={() => setMode('login')}
@@ -168,7 +168,7 @@ export default function AuthPage() {
                       : 'text-[#64748B] hover:text-[#0F172A]'
                   }`}
                 >
-                  تسجيل الدخول
+                  {t('auth.login.title')}
                 </button>
                 <button
                   type="button"
@@ -179,7 +179,7 @@ export default function AuthPage() {
                       : 'text-[#64748B] hover:text-[#0F172A]'
                   }`}
                 >
-                  إنشاء حساب
+                  {t('auth.signup.title')}
                 </button>
               </div>
 
@@ -194,18 +194,18 @@ export default function AuthPage() {
                       transition={{ duration: 0.2 }}
                     >
                       <Input
-                        label="الاسم الكامل"
+                        label={t('auth.name')}
                         value={name}
                         onChange={(event) => setName(event.target.value)}
                         icon={<UserIcon className="h-4 w-4" />}
-                        placeholder="اكتب اسمك الكامل"
+                        placeholder={t('authPage.name.placeholder')}
                       />
                     </motion.div>
                   )}
                 </AnimatePresence>
 
                 <Input
-                  label="البريد الإلكتروني"
+                  label={t('auth.email')}
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
@@ -214,12 +214,12 @@ export default function AuthPage() {
                 />
 
                 <Input
-                  label="كلمة المرور"
+                  label={t('auth.password')}
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   icon={<Lock className="h-4 w-4" />}
-                  placeholder="أدخل كلمة المرور"
+                  placeholder={t('authPage.password.placeholder')}
                 />
 
                 <AnimatePresence initial={false}>
@@ -232,12 +232,12 @@ export default function AuthPage() {
                       transition={{ duration: 0.2 }}
                     >
                       <Input
-                        label="تأكيد كلمة المرور"
+                        label={t('authPage.confirmPassword')}
                         type="password"
                         value={confirmPassword}
                         onChange={(event) => setConfirmPassword(event.target.value)}
                         icon={<Lock className="h-4 w-4" />}
-                        placeholder="أعد إدخال كلمة المرور"
+                        placeholder={t('authPage.confirmPassword.placeholder')}
                       />
                     </motion.div>
                   )}
@@ -250,13 +250,13 @@ export default function AuthPage() {
                 )}
 
                 <Button className="mt-2 w-full rounded-2xl py-3 text-base" type="submit" loading={isLoading}>
-                  {mode === 'login' ? 'متابعة إلى لوحة التحكم' : 'إنشاء الحساب والبدء'}
+                  {mode === 'login' ? t('authPage.login.cta') : t('authPage.signup.cta')}
                 </Button>
               </form>
 
               <div className="mt-6 flex items-center gap-3">
                 <div className="h-px flex-1 bg-[#E2E8F0]" />
-                <span className="text-sm text-[#94A3B8]">أو</span>
+                <span className="text-sm text-[#94A3B8]">{t('auth.or')}</span>
                 <div className="h-px flex-1 bg-[#E2E8F0]" />
               </div>
 
@@ -265,7 +265,7 @@ export default function AuthPage() {
                 onClick={() => {
                   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
                   if (!clientId) {
-                    setError('Google OAuth غير مُعدّ بعد.')
+                    setError(t('authPage.error.googleNotConfigured'))
                     return
                   }
                   const params = new URLSearchParams({
@@ -278,7 +278,7 @@ export default function AuthPage() {
                   })
                   window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`
                 }}
-                className="mt-4 flex w-full items-center justify-center gap-3 rounded-2xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-semibold text-[#334155] shadow-sm transition-colors hover:bg-[#F8FAFC]"
+                className="mt-4 flex w-full items-center justify-center gap-3 rounded-2xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-semibold text-[#334155] shadow-sm transition-colors hover:bg-[var(--rushd-surface-alt)]"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
@@ -286,17 +286,17 @@ export default function AuthPage() {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                 </svg>
-                {mode === 'login' ? 'تسجيل الدخول عبر Google' : 'إنشاء حساب عبر Google'}
+                {mode === 'login' ? t('authPage.login.google') : t('authPage.signup.google')}
               </button>
 
               <div className="mt-6 text-center text-sm text-[#64748B]">
-                {mode === 'login' ? 'ليس لديك حساب؟' : 'لديك حساب بالفعل؟'}{' '}
+                {mode === 'login' ? t('auth.login.noAccount') : t('auth.signup.hasAccount')}{' '}
                 <button
                   type="button"
                   onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
                   className="font-semibold text-[#0EA5A4] transition-colors hover:text-[#0F766E]"
                 >
-                  {mode === 'login' ? 'أنشئ حساباً جديداً' : 'تسجيل الدخول'}
+                  {mode === 'login' ? t('auth.signup.link') : t('auth.login.link')}
                 </button>
               </div>
             </Card>

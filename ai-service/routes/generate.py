@@ -15,7 +15,7 @@ from pipelines.cover_letter import CoverLetterPipeline
 from pipelines.cv_improver import CVImproverPipeline
 from pipelines.job_processor import JobProcessorPipeline
 from pipelines.job_targeting import JobTargetingPipeline
-from routes.helpers import fetch_job, fetch_resume, fetch_user, get_db
+from routes.helpers import fetch_job, fetch_owned_resume, fetch_resume, fetch_user, get_db
 from services.llm_client import get_llm_client
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ def cv_feedback():
     if not user_id or not resume_id:
         return jsonify({"error": "user_id and resume_id are required"}), 400
 
-    resume = fetch_resume(str(resume_id))
+    resume = fetch_resume(str(resume_id), str(user_id))
     if not resume:
         return jsonify({"error": "Resume not found"}), 404
 
@@ -114,7 +114,7 @@ def cover_letter():
         return jsonify({"error": "user_id, job_id, and resume_id are required"}), 400
 
     user = fetch_user(str(user_id))
-    resume = fetch_resume(str(resume_id))
+    resume = fetch_resume(str(resume_id), str(user_id))
     job = fetch_job(str(job_id))
 
     if not user or not resume or not job:
@@ -139,6 +139,7 @@ def cover_letter():
 @generate_bp.post("/api/interview-prep")
 def interview_prep():
     data = request.get_json(silent=True) or {}
+    user_id = data.get("user_id")
     job_id = data.get("job_id")
     resume_id = data.get("resume_id")
     language = str(data.get("language") or "ar").lower()
@@ -147,7 +148,10 @@ def interview_prep():
         return jsonify({"error": "job_id is required"}), 400
 
     job = fetch_job(str(job_id))
-    resume = fetch_resume(str(resume_id)) if resume_id else None
+    # resume_id is optional enrichment here — a mismatched/unowned resume_id
+    # is silently treated as "no resume given" rather than failing the
+    # whole request; see fetch_owned_resume's docstring.
+    resume = fetch_owned_resume(resume_id, user_id)
 
     if not job:
         return jsonify({"error": "Job not found"}), 404
@@ -202,12 +206,13 @@ def interview_prep():
 def ats_check():
     """Run ATS compatibility checks on a parsed resume."""
     data = request.get_json(silent=True) or {}
+    user_id = data.get("user_id")
     resume_id = data.get("resume_id")
 
-    if not resume_id:
-        return jsonify({"error": "resume_id is required"}), 400
+    if not user_id or not resume_id:
+        return jsonify({"error": "user_id and resume_id are required"}), 400
 
-    resume = fetch_resume(str(resume_id))
+    resume = fetch_resume(str(resume_id), str(user_id))
     if not resume:
         return jsonify({"error": "Resume not found"}), 404
 
@@ -232,10 +237,14 @@ def job_targeting():
     resume_summary = data.get("resume_summary")
     skills = data.get("skills") or []
 
-    # Optionally hydrate from resume_id if provided
+    # Optionally hydrate from resume_id if provided — requires user_id too,
+    # and silently skips hydration (rather than erroring) on any ownership
+    # mismatch, same as fetch_owned_resume everywhere else; see its
+    # docstring.
     resume_id = data.get("resume_id")
+    user_id = data.get("user_id")
     if resume_id and not resume_summary:
-        resume = fetch_resume(str(resume_id))
+        resume = fetch_owned_resume(resume_id, user_id)
         parsed = _resume_payload(resume)
         if parsed:
             resume_summary = parsed.get("summary")
@@ -356,7 +365,7 @@ def application_email():
     if not user or not job:
         return jsonify({"error": "User or job not found"}), 404
 
-    resume = fetch_resume(str(resume_id)) if resume_id else None
+    resume = fetch_owned_resume(resume_id, user_id)
     parsed_resume = _resume_payload(resume)
 
     name = user.get("name") or "Applicant"
@@ -528,7 +537,7 @@ def form_answers():
 
     user = fetch_user(str(user_id)) if user_id else None
     job = fetch_job(str(job_id)) if job_id else None
-    resume = fetch_resume(str(resume_id)) if resume_id else None
+    resume = fetch_owned_resume(resume_id, user_id)
     parsed_resume = _resume_payload(resume)
 
     profile = {
@@ -702,7 +711,7 @@ def interview_answer():
     if not user or not job:
         return jsonify({"error": "User or job not found"}), 404
 
-    resume = fetch_resume(str(resume_id)) if resume_id else None
+    resume = fetch_owned_resume(resume_id, user_id)
     parsed_resume = _resume_payload(resume)
 
     name = user.get("name") or "Applicant"
@@ -928,7 +937,7 @@ def ats_review():
 
     user = fetch_user(str(user_id))
     job = fetch_job(str(job_id))
-    resume = fetch_resume(str(resume_id))
+    resume = fetch_resume(str(resume_id), str(user_id))
     if not user or not job or not resume:
         return jsonify({"error": "User, job, or resume not found"}), 404
 
@@ -1019,7 +1028,7 @@ def _hydrate_user_profile(user_id: str | None, resume_id: str | None) -> dict:
         profile["industries"] = prefs.get("industries") or []
 
     if resume_id:
-        resume = fetch_resume(str(resume_id))
+        resume = fetch_owned_resume(resume_id, user_id)
         parsed = _resume_payload(resume)
         if parsed:
             profile["skills"] = parsed.get("skills") or []
@@ -1109,7 +1118,7 @@ def apply_pack():
 
     user = fetch_user(str(user_id))
     job = fetch_job(str(job_id))
-    resume = fetch_resume(str(resume_id))
+    resume = fetch_resume(str(resume_id), str(user_id))
 
     if not user or not job or not resume:
         return jsonify({"error": "User, job, or resume not found"}), 404

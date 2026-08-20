@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { useTranslation } from '@/store/i18nStore'
 
 interface ModalProps {
   open: boolean
@@ -18,6 +19,7 @@ export default function Modal({
   className,
 }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
+  const { t, dir } = useTranslation()
 
   useEffect(() => {
     if (!open) return
@@ -51,7 +53,7 @@ export default function Modal({
           'relative w-full max-w-lg rounded-xl bg-white p-6 shadow-xl animate-[scaleIn_200ms_ease-out]',
           className,
         )}
-        dir="rtl"
+        dir={dir}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -62,8 +64,8 @@ export default function Modal({
             <h2 className="text-lg font-semibold text-[#0F172A]">{title}</h2>
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-[#64748B] transition-colors hover:bg-[#F8FAFC] hover:text-[#0F172A] cursor-pointer"
-              aria-label="إغلاق"
+              className="rounded-lg p-1.5 text-[#64748B] transition-colors hover:bg-[var(--rushd-surface-alt)] hover:text-[#0F172A] cursor-pointer"
+              aria-label={t('common.close')}
             >
               <X className="h-5 w-5" />
             </button>
@@ -73,8 +75,8 @@ export default function Modal({
         {!title && (
           <button
             onClick={onClose}
-            className="absolute left-4 top-4 rounded-lg p-1.5 text-[#64748B] transition-colors hover:bg-[#F8FAFC] hover:text-[#0F172A] cursor-pointer"
-            aria-label="إغلاق"
+            className="absolute start-4 top-4 rounded-lg p-1.5 text-[#64748B] transition-colors hover:bg-[var(--rushd-surface-alt)] hover:text-[#0F172A] cursor-pointer"
+            aria-label={t('common.close')}
           >
             <X className="h-5 w-5" />
           </button>

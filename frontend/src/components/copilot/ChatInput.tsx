@@ -24,7 +24,7 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
   }
 
   return (
-    <div className="border border-[#E2E8F0] bg-white rounded-2xl p-2 flex items-end gap-2 focus-within:border-[#0EA5A4] transition-colors">
+    <div className="border border-[#E2E8F0] bg-white rounded-2xl p-2 flex items-end gap-2 focus-within:border-[#0EA5A4] focus-within:ring-2 focus-within:ring-[#0EA5A4]/30 transition-colors">
       <textarea
         value={value}
         onChange={(e) => {
