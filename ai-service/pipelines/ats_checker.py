@@ -58,7 +58,19 @@ def _flatten_experience(item) -> str:
     if isinstance(item, dict):
         parts: list[str] = []
         for key in ("title", "company", "location", "start", "end", "summary", "description"):
+            def _flatten_experience(item) -> str:
+    """Serialize an experience entry (string or dict) into a searchable blob."""
+    if isinstance(item, dict):
+        parts: list[str] = []
+        for key in ("title", "company", "location", "start", "end", "summary", "description"):
             value = item.get(key)
+            if value:
+                parts.append(str(value))
+        highlights = item.get("highlights")
+        if isinstance(highlights, list):
+            parts.extend(str(h) for h in highlights if h)
+        return " ".join(parts)
+    return str(item or "")
             if value:
                 parts.append(str(value))
         highlights = item.get("highlights")
